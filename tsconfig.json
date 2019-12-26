@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+		"module": "commonjs",		// 编译出的代码采用的模块规范
+		"target": "es2016",			// 编译出的代码采用ES的哪个版本
+	},
+	"exclude": [		// 不编译这些目录里的文件
+		"node_modules"
+	]
+}
