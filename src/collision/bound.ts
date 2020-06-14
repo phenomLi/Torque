@@ -32,7 +32,10 @@ export class Bound {
      * @param distance
      */
     translate(distance: Vector) {
-        this.set(this.min.add(distance), this.max.add(distance));
+        this.min.x += distance.x;
+        this.min.y += distance.y;
+        this.max.x += distance.x;
+        this.max.y += distance.y;
     }
 
     /**
@@ -41,7 +44,11 @@ export class Bound {
      */
     update(vertexList: VertexList) {
         let range = Vertices.getRange(vertexList);
-        this.set(range.min, range.max);
+
+        this.min.x = range.min.x;
+        this.min.y = range.min.y;
+        this.max.x = range.max.x;
+        this.max.y = range.max.y;
     }
 
     /**

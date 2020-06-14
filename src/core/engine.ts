@@ -85,7 +85,7 @@ export class Engine {
     // 是否开启休眠机制
     enableSleeping: boolean;
     // 是否开启碰撞检测
-    enableColllisionDetection: boolean;
+    enableCollisionDetection: boolean;
     // 是否开启碰撞求解
     enableCollisionResolve: boolean;
 
@@ -123,10 +123,10 @@ export class Engine {
         this.width = width || 0;
         this.height = height || 0;
         
-        this.gravity = new Vector(0, 8);
+        this.gravity = new Vector(0, 9);
 
         this.enableSleeping = true;
-        this.enableColllisionDetection = true;
+        this.enableCollisionDetection = true;
         this.enableCollisionResolve = true;
 
         this.methods = {
@@ -169,8 +169,10 @@ export class Engine {
         }
 
         for(let i = 0; i < this.bodies.length; i++) {
+            let force = this.gravity.scl(this.bodies[i].mass * 50);
+
             // 应用受力
-            this.bodies[i].applyForce(this.gravity.scl(this.bodies[i].mass));
+            this.bodies[i].applyForce(force);
             // 积分受力
             this.bodies[i].integrateForces(dt);
         }
@@ -179,12 +181,14 @@ export class Engine {
         this.resolver.solveConstraint();
 
         // 是否开启碰撞检测
-        if(this.enableColllisionDetection) {
+        if(this.enableCollisionDetection) {
             
             // 粗阶段检测
             broadPhasePair = this.detector.broadPhase.detect(this.bodies);
             // 细阶段检测
             collisions = this.detector.narrowPhase.detect(broadPhasePair);
+
+            // console.log(collisions);
             
             this.manifoldTable.update(collisions, timeStamp);
             // 移除缓存表超时的碰撞对
@@ -222,6 +226,10 @@ export class Engine {
      */
     render(dt: number) {
         for(let i = 0; i < this.bodies.length; i++) {
+            if(this.bodies[i].sleeping || this.bodies[i].fixed) {
+                continue;
+            }
+
             // 渲染刚体
             this.bodies[i].render(this.bodies[i], dt);
         }

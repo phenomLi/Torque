@@ -1,4 +1,3 @@
-import { Matrix } from "./matrix";
 
 
 // 二维向量 {x, y}
@@ -7,10 +6,10 @@ export class Vector {
     public y: number;
 
     constructor(x?: number, y?: number) {
-        if(x === undefined && y === undefined) {
-            this.set(0, 0);
-        }
-        else {
+        this.x = 0;
+        this.y = 0;
+
+        if(x !== undefined && y !== undefined) {
             this.set(x, y);
         }
     }
@@ -31,16 +30,26 @@ export class Vector {
      * 相加
      * @param v 
      */
-    add(v: Vector): Vector {
-        return new Vector(this.x + v.x, this.y + v.y);
+    add(v: Vector, out?: Vector): Vector {
+        out = out || new Vector();
+        
+        out.x = this.x + v.x;
+        out.y = this.y + v.y;
+
+        return out;
     }
 
     /**
      * 相减
      * @param v 
      */
-    sub(v: Vector): Vector {
-        return new Vector(this.x - v.x, this.y - v.y);
+    sub(v: Vector, out?: Vector): Vector {
+        out = out || new Vector();
+       
+        out.x = this.x - v.x;
+        out.y = this.y - v.y;
+
+        return out;
     }
 
     /**
@@ -63,8 +72,14 @@ export class Vector {
      * 与标量进行叉积
      * @param n
      */
-    croNum(n: number): Vector {
-        return new Vector(-n * this.y, n * this.x)
+    croNum(n: number, out?: Vector): Vector {
+        out = out || new Vector();
+        
+        out.x = -n * this.y;
+        out.y = n * this.x;
+
+        return out;
+       
     }
 
     /**
@@ -78,15 +93,20 @@ export class Vector {
     /**
      * 法向
      */
-    nor(): Vector {
-        return new Vector(-this.y, this.x);
+    nor(out?: Vector): Vector {
+        out = out || new Vector();
+        
+        out.x = -this.y;
+        out.y = this.x;
+
+        return out;
     }
 
     /**
      * 求模
      */
     len(): number {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
+        return Math.hypot(this.x, this.y);
     }
 
     /**
@@ -101,21 +121,36 @@ export class Vector {
      */
     nol(): Vector {
         let len = this.len();
-        return len !== 0? new Vector(this.x / len, this.y / len): new Vector(0, 0);
+
+        if(len === 0) {
+            return new Vector();
+        }
+
+        this.x = this.x / len;
+        this.y = this.y / len;
+
+        return this;
     }
 
     /**
      * 缩放
+     * @param n
      */
-    scl(n: number): Vector {
-        return new Vector(n * this.x, n * this.y);
+    scl(n: number, out?: Vector): Vector {
+        out = out || new Vector();
+        out.x = n * this.x;
+        out.y = n * this.y;
+        return out;
     }
 
     /**
      * 反向
      */
-    inv(): Vector {
-        return new Vector(-this.x, -this.y);
+    inv(out?: Vector): Vector {
+        out = out || new Vector();
+        out.x = -this.x;
+        out.y = -this.y;
+        return out;
     }
 
     /**
@@ -146,18 +181,19 @@ export class Vector {
      * @param radian 角度（弧度制）
      * @param point 绕的点
      */
-    rot(radian: number, point?: Vector): Vector {
-        point = point || new Vector(0, 0);
+    rot(radian: number, point: Vector, out?: Vector): Vector {
+        point = point || new Vector();
+        out = out || new Vector();
 
         let cos = Math.cos(radian),
             sin = Math.sin(radian),
-            dv = this.sub(point),
-            v = new Vector(0, 0);
-                
-            v.x = point.x + (dv.x * cos - dv.y * sin);
-            v.y = point.y + (dv.x * sin + dv.y * cos);
+            dx = this.x - point.x,
+            dy = this.y - point.y;
+
+        out.x = point.x + (dx * cos - dy * sin);
+        out.y = point.y + (dx * sin + dy * cos);
         
-        return v;
+        return out;
     }
 
     /**
@@ -165,9 +201,20 @@ export class Vector {
      * @param direction
      * @param len 
      */
-    loc(direction: Vector, len: number): Vector {
-        return this.add(direction.nol().scl(len));
+    loc(direction: Vector, len: number, out?: Vector): Vector {
+        out = out || new Vector();
+
+        direction = direction.nol();
+        out.x = this.x + direction.x * len;
+        out.y = this.y + direction.y * len;
+
+        return out;
     }
 };
 
+
+export const _tempVector1 = new Vector();
+export const _tempVector2 = new Vector();
+export const _tempVector3 = new Vector();
+export const _tempVector4 = new Vector();
 

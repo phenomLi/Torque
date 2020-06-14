@@ -22,8 +22,8 @@ export class Sleeping {
 
     constructor(opt: EngineOpt) {
         this.sleepThreshold = 60;
-        this.sleepMotionThreshold = 0.00001;
-        this.wakeMotionThreshold = 0.008;
+        this.sleepMotionThreshold = 0.01;
+        this.wakeMotionThreshold = 0.8;
 
         Util.merge(this, opt);
     }
@@ -39,9 +39,6 @@ export class Sleeping {
         body.velocity.x = 0;
         body.velocity.y = 0;
         body.angularVelocity = 0;
-
-        body.speed = 0;
-        body.angularSpeed = 0;
         body.motion = 0;
 
         Event.emit(body, 'sleepStart', body);
@@ -70,13 +67,13 @@ export class Sleeping {
 
             if(body.fixed) continue;
 
-            let motion = body.velocity.len() * body.velocity.len() + Math.abs(body.angularVelocity) * Math.abs(body.angularVelocity);
+            let motion = body.motion;
 
             // 若刚体合外力不为0，则唤醒
-            if (body.force.x !== 0 || body.force.y !== 0) {
-                this.wake(body);
-                continue;
-            }
+            // if (body.force.x !== 0 || body.force.y !== 0) {
+            //     this.wake(body);
+            //     continue;
+            // }
 
             // 若刚体已经休眠，则返回
             if(body.sleeping) continue;

@@ -4,7 +4,7 @@
 
 import { Polygon, PolygonOpt } from "./polygon";
 import { Vector } from "../math/vector";
-import { Vertex, Poly, Vertices } from "../common/vertices";
+import { Poly, Vertices } from "../common/vertices";
 
 
 
@@ -29,7 +29,7 @@ export class Rect extends Polygon {
             rightTop = leftTop.add(new Vector(this.width, 0)),
             rightBottom = leftTop.add(new Vector(this.width, this.height)),
             leftBottom = leftTop.add(new Vector(0, this.height)),
-            poly = Vertices.create(this, [leftTop, rightTop, rightBottom, leftBottom].map(v => new Vertex(v)));
+            poly = Vertices.create(this, [leftTop, rightTop, rightBottom, leftBottom]);
 
             // 筛选矩形的轴
             poly.axes = Vertices.uniqueAxes(poly.axes);

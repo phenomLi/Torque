@@ -7,7 +7,7 @@ import { Bound } from "../collision/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
 import { Event } from "../event/eventEmitter";
-import { TimeStepper } from "../core/timeStepper";
+import { PolygonOpt } from "./polygon";
 
 
 
@@ -97,10 +97,6 @@ export class Body {
     velocity: Vector;
     // 角速度
     angularVelocity: number;
-    // 速度（无符号标量）
-    speed: number;
-    // 角速度（无符号标量）
-    angularSpeed: number;
     // 动量
     motion: number;
 
@@ -173,8 +169,6 @@ export class Body {
         this.rotation = 0;
         this.velocity = new Vector(0, 0);
         this.angularVelocity = 0;
-        this.speed = 0;
-        this.angularSpeed = 0;
         this.motion = 0;
         this.mass = 10;
         this.area = 0;
@@ -208,19 +202,23 @@ export class Body {
 
         if(this.fixed) this.sleeping = true;
 
+        this.init(opt);
         this.area = this.getArea();
         this.density = this.getDensity();
         this.invMass = this.getInvMass();
+        this.position = this.getCentroid();
         this.inertia = this.getInertia();
         this.invInertia = this.getInvInertia();
-        this.position = this.getCentroid();
-        this.speed = this.velocity.len();
-        this.angularSpeed = Math.abs(this.angularVelocity);
-        this.motion = this.speed * this.speed + this.angularSpeed * this.angularSpeed;
+        this.motion = 0;
 
         // 设置渲染函数
         this.setRender(() => {});
     }
+
+    /**
+     * 初始化一些数据
+     */
+    init(opt: PolygonOpt) {}
 
     /**
      * 计算质量倒数
@@ -266,15 +264,7 @@ export class Body {
     getInertia(): number {
         return 1;
     }
-
-    /**
-     * 获取包围盒
-     * @override
-     */
-    getBound(): Bound {
-        return null;
-    }
-
+    
     /**
      * 设置用户想要携带的信息数据
      * @param data 数据
@@ -408,11 +398,11 @@ export class Body {
         }
 
         // 更新标量速度
-        this.speed = this.velocity.len();
-        this.angularSpeed = Math.abs(this.angularVelocity);
+        let speed = Math.hypot(dx, dy),
+            angularSpeed = Math.abs(dr);
 
         //更新动量
-        this.motion = this.speed * this.speed + this.angularSpeed * this.angularSpeed;
+        this.motion = speed * speed + angularSpeed * angularSpeed;
 
         this.force.x = 0;
         this.force.y = 0;

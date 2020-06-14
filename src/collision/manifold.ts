@@ -1,7 +1,7 @@
 import { Body } from "../body/body";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
-import { Poly, Vertex } from "../common/vertices";
+import { Poly } from "../common/vertices";
 import { Arc } from "../common/arcs";
 
 
@@ -14,7 +14,7 @@ export type Geometry = Poly | Arc;
 
 // 接触点信息
 export class Contact {
-    vertex: Vertex;
+    vertex: Vector = new Vector();
     inverseMass: number;
     shareNormal: number;
     shareTangent: number;
@@ -24,8 +24,9 @@ export class Contact {
     offsetB: Vector;
     bias: number;
 
-    constructor(vertex: Vertex) {
-        this.vertex = vertex;
+    constructor(vertex: Vector) {
+        this.vertex.x = vertex.x;
+        this.vertex.y = vertex.y;
         this.shareNormal = 0;
         this.shareTangent = 0;
         this.inverseMass = 0;
@@ -50,13 +51,13 @@ export class Collision {
     // 碰撞子图形B
     partB: Geometry;
     // 碰撞法线
-    normal: Vector;
+    normal: Vector = new Vector();
     // 碰撞切线
-    tangent: Vector;
+    tangent: Vector = new Vector();
     // 接触点
     contacts: Contact[];
     // 穿透向量
-    penetration: Vector;
+    penetration: Vector = new Vector();
     // 穿透深度
     depth: number;
     // 是否发生了碰撞
@@ -79,7 +80,7 @@ export class Manifold {
     // 碰撞信息
     collision: Collision;
     // 碰撞接触点
-    contacts: Contact[];
+    contacts: Contact[] = [];
     // 激活状态
     // 激活状态的意思即上一次更新时流形是否发生碰撞，若是，则表示该流形在激活状态
     isActive: boolean;

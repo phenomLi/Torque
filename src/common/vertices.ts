@@ -1,19 +1,12 @@
 import { Vector } from "../math/vector";
 import { Lines, LineSegment } from "./line";
 import { Bound } from "../collision/bound";
-import { VelocityBound } from "../collision/velocityBound";
 import { Body } from "../body/body";
 import { Util } from "./util";
-
-// 顶点类型
-export class Vertex extends Vector {
-    constructor(v: Vector) {
-        super(v.x, v.y);
-    }
-}
+import { Polygon } from "../body/polygon";
 
 // 顶点列表类型
-export type VertexList = Array<Vertex>;
+export type VertexList = Array<Vector>;
 
 // 一个顶点信息包
 export class Poly {
@@ -22,7 +15,6 @@ export class Poly {
     axes: Vector[];
     body: Body;
     bound: Bound;
-    parts: Poly[];
     isConcave: boolean;
     center: Vector;
 
@@ -30,7 +22,6 @@ export class Poly {
         this.id = Util.id();
         this.body = body;
         this.vertexList = vertexList;
-        this.parts = [];
         this.axes = Vertices.getAxes(vertexList);
         this.center = Vertices.getCenter(vertexList);
         this.bound = Vertices.getBound(vertexList);
@@ -79,10 +70,10 @@ export const Vertices = {
             j = (i + 1) % vertexList.length;
             cross = vertexList[i].cro(vertexList[j]);
             temp = vertexList[i].add(vertexList[j]).scl(cross);
-            centroid = centroid.add(temp);
+            centroid.add(temp, centroid);
         }
 
-        return centroid.scl(1/(6*area));
+        return centroid.scl(1 / (6 * area), centroid);
     },
 
     /**
@@ -103,25 +94,28 @@ export const Vertices = {
 
     /**
      * 获取多边形的转动惯量
-     * 公式来自：http://www.physicsforums.com/showthread.php?t=25293
+     * 公式来自：https://blog.csdn.net/weixin_34194702/article/details/93587529
      * @param vertexList 
      * @param mass 质量
+     * @param position
      */
-    getInertia(vertexList: VertexList, mass: number): number {
+    getInertia(vertexList: VertexList, mass: number, position: Vector): number {
         let numerator = 0,
             denominator = 0,
             v = vertexList,
-            cross,
-            j;
+            cur, next,
+            cross;
 
         for(let n = 0; n < v.length; n++) {
-            j = (n + 1)%v.length;
-            cross = Math.abs(v[j].cro(v[n]));
-            numerator += cross*(v[j].dot(v[j]) + v[j].dot(v[n]) + v[n].dot(v[n]));
+            cur = v[n].sub(position, cur);
+            next = v[(n + 1) % v.length].sub(position, next);
+
+            cross = Math.abs(cur.cro(next));
+            numerator += cross * (cur.dot(cur) + cur.dot(next) + next.dot(next));
             denominator += cross;
         }
 
-        return (mass/6)*(numerator/denominator);
+        return (mass / 6) * (numerator / denominator);
     },
 
     /**
@@ -181,17 +175,6 @@ export const Vertices = {
         return new Bound(range.min, range.max);
     },
 
-    /**
-     * 获取速度扩展的包围盒
-     * @param vertexList 
-     * @param velocity 
-     */
-    getVelocityBound(vertexList: VertexList, velocity: Vector): Bound {
-        let range = Vertices.getRange(vertexList);
-
-        return new VelocityBound(range.min, range.max, velocity);
-    },
-
 
     /**
      * 使用斜率筛去共线的轴
@@ -212,9 +195,9 @@ export const Vertices = {
             axesTable[gradient] = axis;
         }
 
-        for (gradient in axesTable) {
-            tmpAxes.push(axesTable[gradient]);
-        }
+        Object.keys(axesTable).map(item => {
+            tmpAxes.push(axesTable[item]);
+        });
 
         return tmpAxes;
     },
@@ -233,31 +216,19 @@ export const Vertices = {
         
         // 转动顶点
         for(i = 0; i < vertexList.length; i++) {
-            let v = vertexList[i].rot(radian, point);
-            vertexList[i].x = v.x;
-            vertexList[i].y = v.y;
+            vertexList[i].rot(radian, point, vertexList[i]);
         }
 
         // 转动轴
         for(i = 0; i < axes.length; i++) {
-            axes[i] = axes[i].rot(radian);
+            axes[i].rot(radian, null, axes[i]);
         }
         
         // 更新几何中心
-        poly.center = poly.center.rot(radian, point);
+        poly.center.rot(radian, point, poly.center);
 
         // 更新包围盒
         poly.bound.update(poly.vertexList);
-
-        // 更新子多边形包围盒
-        if(poly.parts.length > 1) {
-            for(i = 0; i < poly.parts.length; i++) {
-                let v = poly.parts[i].center.rot(radian, point);
-                poly.parts[i].center.x = v.x;
-                poly.parts[i].center.y = v.y;
-                poly.parts[i].bound.update(poly.parts[i].vertexList);
-            }
-        }
     },  
 
     /**
@@ -266,8 +237,7 @@ export const Vertices = {
      * @param distance 位移向量
      */
     translate(poly: Poly, distance: Vector) {
-        let v: VertexList = poly.vertexList,
-            i;
+        let v: VertexList = poly.vertexList, i;
 
         // 位移顶点
         for(i = 0; i < v.length; i++) {
@@ -280,15 +250,6 @@ export const Vertices = {
 
         // 位移包围盒
         poly.bound.translate(distance);
-
-        // 位移子多边形包围盒
-        if(poly.parts.length > 1) {
-            for(i = 0; i < poly.parts.length; i++) {
-                poly.parts[i].center.x += distance.x;
-                poly.parts[i].center.y += distance.y;
-                poly.parts[i].bound.translate(distance);
-            }
-        }
     },
 
     /**
@@ -301,23 +262,23 @@ export const Vertices = {
             v = poly.vertexList.slice(0),
             partA: Poly, 
             partB: Poly,
-            vertexListA: Vertex[], 
-            vertexListB: Vertex[],
+            vertexListA: Vector[], 
+            vertexListB: Vector[],
             axes = poly.axes.slice(0),
             axesA: Vector[], 
             axesB: Vector[],
             xAxis: Vector,
             vTest: Vector,
             vDiv: Vector,
-            dividePointA: Vertex,
-            dividePointB: Vertex,
+            dividePointA: Vector,
+            dividePointB: Vector,
             len = v.length, i, j, cur, next, next2, 
             flag = false;
 
         for(i = 0 ; i < len; i++) {
             cur = i;
-            next = (i + 1)%len;
-            next2 = (i + 2)%len;
+            next = (i + 1) % len;
+            next2 = (i + 2) % len;
 
             xAxis = v[next].sub(v[cur]); 
             vTest = v[next2].sub(v[cur]);
@@ -355,14 +316,14 @@ export const Vertices = {
 
         // 检测拆分出来的两个多边形是否是凹多边形，若果是，继续递归拆分
         if(this.isConcave(vertexListA)) {
-            parts = parts.concat(this.divide(partA));
+            parts.push(...this.divide(partA));
         }
         else {
             parts.push(partA);
         }
 
         if(this.isConcave(vertexListB)) {
-            parts = parts.concat(this.divide(partB));
+            parts.push(...this.divide(partB));
         }
         else {
             parts.push(partB);
@@ -383,7 +344,7 @@ export const Vertices = {
             // 当前正在切割的顶点
             curClipVertex = v.slice(0),
             // 保存所有凹点
-            caves: Vertex[] = [],
+            caves: Vector[] = [],
             // 当前顶点下标
             curVertexIndex: number,
             // 上一个顶点的下标
@@ -391,13 +352,13 @@ export const Vertices = {
             // 下一个顶点的下标
             nextVertexIndex: number,
             // 当前顶点
-            curVertex: Vertex,
+            curVertex: Vector,
             // 上一个点
-            prevVertex: Vertex,
+            prevVertex: Vector,
             // 下一个点
-            nextVertex: Vertex,
+            nextVertex: Vector,
             // 顶点集
-            vertexList: Vertex[] = [],
+            vertexList: Vector[] = [],
             // 轴集
             axes: Vector[] = [],
             // 小三角形集
@@ -407,8 +368,8 @@ export const Vertices = {
 
             i;
 
-        // 若该图形顶点小于等于4，不用分割
-        if(curClipVertex.length <= 4) return [poly];
+        // 若该图形顶点小于等于5，不用分割
+        if(curClipVertex.length <= 5) return [poly];
 
         // 获取凹点
         caves = this.findCaves(v);
@@ -561,12 +522,7 @@ export const Vertices = {
      * @param vertexList 
      */
     transform2World(point: Vector, vertexList: VertexList): VertexList {
-        return vertexList.map(v => {
-            let {x, y} = v.add(point);
-            v.x = x;
-            v.y = y;
-            return v;
-        });
+        return vertexList.map(v => v.add(point, v));
     },
 
     /**
@@ -575,12 +531,7 @@ export const Vertices = {
      * @param vertexList 
      */
     transform2Local(point: Vector, vertexList: VertexList): VertexList {
-        return vertexList.map(v => {
-            let {x, y} = v.sub(point);
-            v.x = x;
-            v.y = y;
-            return v;
-        });
+        return vertexList.map(v => v.sub(point, v));
     },
 
     /**
@@ -635,16 +586,16 @@ export const Vertices = {
         for(i = 1; i < len; i++) {
             prevVertex = v[i - 1];
             curVertex = v[i];
-            nextVertex = v[(i + 1)%len];
+            nextVertex = v[(i + 1) % len];
 
             // 利用叉乘判断
-            if(curVertex.sub(prevVertex).cor(nextVertex.sub(curVertex)) < 0) {
+            if(curVertex.sub(prevVertex).cro(nextVertex.sub(curVertex)) < 0) {
                 caves.push(curVertex);
             }
         }
 
         return caves;
-    },
+    }
 }
 
 

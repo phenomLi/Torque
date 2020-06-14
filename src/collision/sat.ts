@@ -1,7 +1,6 @@
-import { Vector } from "../math/vector";
-import { Poly, VertexList, Vertices, Vertex } from "../common/vertices";
+import { Vector, _tempVector1 } from "../math/vector";
+import { Poly, VertexList, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
-import { Util } from "../common/util";
 import { Collision, Contact, Geometry } from "./manifold";
 
 
@@ -51,16 +50,20 @@ export class SAT {
                 return collision;
             }
 
-            collision.normal = this.reviseNormal(axes[result.index], poly, geometry);
+            let normal = this.reviseNormal(axes[result.index], poly, geometry);
+
+            collision.normal.x = normal.x;
+            collision.normal.y = normal.y;
+            collision.tangent = normal.nor(collision.tangent);
+
             collision.partA = poly;
             collision.partB = geometry;
             collision.bodyA = poly.body;
             collision.bodyB = geometry.body;
-            collision.tangent = collision.normal.nor();
         }
 
         collision.depth = result.minOverlap;
-        collision.penetration = collision.normal.scl(collision.depth);
+        collision.penetration = collision.normal.scl(collision.depth, collision.penetration);
         collision.contacts = this.findContacts(poly, geometry, collision.normal, collision.depth);
         collision.collide = true;
 
@@ -84,13 +87,9 @@ export class SAT {
      * @param prevCollision
      */
     circleCollideCircle(arcA: Arc, arcB: Arc, prevCollision: Collision): Collision {
-        let axis: Vector = arcA.center.sub(arcB.center),
-            overlaps: number = 0,
-            collision: Collision = null;
-        
-        collision = new Collision();
-        axis = arcA.center.sub(arcB.center);
-        overlaps = (arcA.radius + arcB.radius) - axis.len();
+        let axis: Vector = arcA.center.sub(arcB.center, _tempVector1),
+            overlaps: number = (arcA.radius + arcB.radius) - axis.len(),
+            collision: Collision = new Collision();
 
         // 两圆心距离比两圆半径和要大，即没有发生碰撞
         if(overlaps < 0) {
@@ -98,15 +97,23 @@ export class SAT {
             return collision;
         }
 
+        let normal = this.reviseNormal(axis, arcA, arcB).nol();
+
         collision.partA = arcA;
         collision.partB = arcB;
         collision.bodyA = arcA.body;
         collision.bodyB = arcB.body;
-        collision.normal = this.reviseNormal(axis, arcA, arcB).nol();
-        collision.tangent = collision.normal.nor().nol();
+
+        collision.normal.x = normal.x;
+        collision.normal.y = normal.y;
+        collision.tangent = normal.nor(collision.tangent).nol();
+
         collision.depth = overlaps;
-        collision.penetration = collision.normal.scl(overlaps);
-        collision.contacts = [new Contact(new Vertex(arcA.center.loc(collision.normal.inv(), arcA.radius - overlaps/2)))];
+        collision.penetration = normal.scl(overlaps, collision.penetration);
+
+        arcA.center.loc(normal.inv(_tempVector1), arcA.radius - overlaps/2, _tempVector1)
+
+        collision.contacts = [new Contact(_tempVector1)];
         collision.collide = true;
 
         return collision;
@@ -161,41 +168,16 @@ export class SAT {
      * @param geometry 
      */
     private filterAxes(poly: Poly, geometry: Geometry): Vector[] {
-        let axes = [],
-            partsA: Geometry[] = poly.parts,
-            partsB: Geometry[] = null,
-            partA: Geometry,
-            partB: Geometry,
-            i, j;
-
+        let axes: Vector[] = [];
+        
         // 若geometry是多边形
         if(geometry instanceof Poly) {
-            partsB = geometry.parts;
-
-            if(partsA.length && partsB.length) {
-                for(i = 0; i < partsA.length; i++) {
-                    partA = <Poly>partsA[i];
-                    for(j = 0; j < partsB.length; j++) {
-                        partB = <Poly>partsB[j];
-
-                        if(partA.bound.isIntersect(partB.bound)) {
-                            axes = axes.concat(partA.axes);
-                            axes = axes.concat(partB.axes);
-                        }
-                    }
-                }
-            }
+            axes.push(...poly.axes);
+            axes.push(...geometry.axes);
         }
         // 是圆形
         else {
-            for(i = 0; i < partsA.length; i++) {
-                partA = <Poly>partsA[i];
-                if(partsA[i].bound.isIntersect(geometry.bound)) {
-                    axes = axes.concat(partA.axes);
-                }
-            }
-
-            axes = axes.concat(Arcs.getAxes(<Arc>geometry, poly));
+            axes.push(Arcs.getAxes(<Arc>geometry, poly), ...poly.axes);
         }
 
         return Vertices.uniqueAxes(axes);
@@ -209,11 +191,11 @@ export class SAT {
      * @param bodyB 刚体B
      */
     private reviseNormal(normal: Vector, geometryA: Geometry, geometryB: Geometry): Vector {
-        if (normal.dot(geometryB.center.sub(geometryA.center)) > 0) {
+        if (normal.dot(geometryB.center.sub(geometryA.center, _tempVector1)) > 0) {
             return normal.inv();
         } 
 
-        return normal;
+        return normal.col();
     }
 
     /**
@@ -247,8 +229,8 @@ export class SAT {
      * @param collision 
      */
     private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
-        let potentialcContactsA: Vertex[] = [],
-            potentialcContactsB: Vertex[] = [],
+        let potentialContactsA: Vector[] = [],
+            potentialContactsB: Vector[] = [],
             contacts: Contact[] = [],
             normalInv = normal.inv(),
             i;
@@ -258,13 +240,13 @@ export class SAT {
                 vertexListB = (<Poly>geometry).vertexList;
 
             // 寻找多边形A最接近多边形B的两个点
-            potentialcContactsA = this.orderProjectionVertexInNormalDirection(vertexListA, normal);
+            potentialContactsA = this.orderProjectionVertexInNormalDirection(vertexListA, normal);
 
-            for(i = 0; i < potentialcContactsA.length; i++) {
+            for(i = 0; i < potentialContactsA.length; i++) {
                 // 查看这些点是否在多边形B内部
-                if(Vertices.isContains(vertexListB, potentialcContactsA[i])) {
+                if(Vertices.isContains(vertexListB, potentialContactsA[i])) {
                     // 如果是，则这个点记为一个碰撞点
-                    contacts.push(new Contact(potentialcContactsA[i]));
+                    contacts.push(new Contact(potentialContactsA[i]));
                 } 
                 else {
                     if(i !== 0) break;
@@ -274,11 +256,11 @@ export class SAT {
             if(contacts.length >= 2) return contacts;
 
             // 同理上面
-            potentialcContactsB = this.orderProjectionVertexInNormalDirection(vertexListB, normalInv);
+            potentialContactsB = this.orderProjectionVertexInNormalDirection(vertexListB, normalInv);
 
-            for(i = 0; i < potentialcContactsB.length; i++) {
-                if(Vertices.isContains(vertexListA, potentialcContactsB[i])) {
-                    contacts.push(new Contact(potentialcContactsB[i]));
+            for(i = 0; i < potentialContactsB.length; i++) {
+                if(Vertices.isContains(vertexListA, potentialContactsB[i])) {
+                    contacts.push(new Contact(potentialContactsB[i]));
                 }
                 else {
                     if(i !== 0) break;
@@ -287,11 +269,11 @@ export class SAT {
 
             // 边界情况：即没有碰撞点的情况
             if(contacts.length < 1) {
-                contacts.push(new Contact(potentialcContactsA[0]));
+                contacts.push(new Contact(potentialContactsA[0]));
             }
         }
         else {
-            contacts.push(new Contact(new Vertex((<Arc>geometry).center.loc(normal, (<Arc>geometry).radius - depth/2))));
+            contacts.push(new Contact((<Arc>geometry).center.loc(normal, (<Arc>geometry).radius - depth/2)));
         }
 
         return contacts;
@@ -302,7 +284,7 @@ export class SAT {
      * @param vertexList 
      * @param normal 
      */
-    private orderProjectionVertexInNormalDirection(vertexList: VertexList, normal: Vector): Vertex[] {
+    private orderProjectionVertexInNormalDirection(vertexList: VertexList, normal: Vector): Vector[] {
         return vertexList.slice(0).sort((vertexA, vertexB) => vertexA.dot(normal) - vertexB.dot(normal));
     }
 
@@ -317,10 +299,10 @@ export class SAT {
         if(prevCollision) {
             let bodyA = geometryA.body,
                 bodyB = geometryB.body,
-                motion = bodyA.speed**2 + bodyA.angularSpeed**2 + bodyB.speed**2 + bodyB.angularSpeed**2;
+                motion = Math.sqrt(bodyA.motion + bodyB.motion);
 
             // 若上次碰撞判定为真，且当前碰撞对刚体趋于静止，可复用
-            return prevCollision.collide && motion < 0.011;
+            return prevCollision.collide && motion < 0.1;
         }
         
         // 碰撞缓存不存在，直接判定无法复用

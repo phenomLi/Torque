@@ -47,7 +47,7 @@ export class NarrowPhase {
             for(j = 0; j < partsA.length; j++) {
                 partA = partsA[j];
 
-                for(k = 0; k < partsA.length; k++) {
+                for(k = 0; k < partsB.length; k++) {
                     partB = partsB[k];
 
                     // 两个子图形包围盒不相交，跳过

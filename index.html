@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Document</title>
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+
+
+#canvas {
+    width: 100%;
+    height: 600px;
+    background-color: #14151F;
+}
+
+</style>
+</head>
+<body>
+
+
+<div id="canvas"></div>
+
+<button id="status">暂停</button>
+<div id="mouse_pos"></div>
+
+<script src="./demo/lib/zrender.min.js"></script>
+<script src="./dist/torque.js"></script>
+<script src="./demo/creator.js"></script>
+<script src="./demo/demo.js"></script>
+<script>
+
+let engineStatus = true;
+
+const mouse_pos = document.getElementById('mouse_pos'),
+      status = document.getElementById('status');
+
+canvas.addEventListener('mousemove', e => {
+    mouse_pos.innerText = 'x: ' + e.offsetX + '  y: ' + e.offsetY;
+});
+
+status.addEventListener('click', () => {
+    engineStatus = !engineStatus;
+
+    if(engineStatus) {
+        status.innerText = '暂停';
+        creator.t.start();
+    }
+    else {
+        status.innerText = '开始';
+        creator.t.pause();
+    }
+});
+
+
+</script>
+</body>
+</html>

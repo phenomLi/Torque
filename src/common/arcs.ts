@@ -1,5 +1,4 @@
 import { Vector } from "../math/vector";
-import { Matrix } from "../math/matrix";
 import { Circle } from "../body/circle";
 import { Poly, Vertices } from "./vertices";
 import { Bound } from "../collision/bound";
@@ -27,9 +26,6 @@ export class Arc {
 
 
 export const Arcs = {
-    // 辅助矩阵，用作求解圆形的碰撞点
-    tempMatrix: Matrix,
-
     /**
      * 创造圆形信息包
      * @param body 
@@ -51,9 +47,9 @@ export const Arcs = {
      * 获取圆形和顶点集间的轴
      * @param vertices 顶点信息
      */
-    getAxes(circle: Arc, poly: Poly): Vector[] {
+    getAxes(circle: Arc, poly: Poly): Vector {
         let closestVertex = Vertices.getClosestVertex(circle.center, poly.vertexList);
-        return [closestVertex.sub(circle.center).nol()];
+        return closestVertex.sub(circle.center).nol();
     },
 
     getBound(center: Vector, radius: number): Bound {

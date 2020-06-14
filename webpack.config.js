@@ -18,5 +18,6 @@ module.exports = {
 				loader: 'awesome-typescript-loader'
 			}
 		]
-	}
+	},
+	devtool: 'eval-source-map'
 };

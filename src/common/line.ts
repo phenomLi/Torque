@@ -15,8 +15,6 @@ export type LineSegment = Vector[];
  */
 export const Lines = {
 
-   
-
     /**
      * 判断点在线段的哪一侧
      * @param line 线段
@@ -50,7 +48,7 @@ export const Lines = {
             point21 = line2[0],
             point22 = line2[1];
     
-    return this.side(line1, point21) !== this.side(line1, point22) && this.side(line2, point11) !== this.side(line2, point12);
+        return this.side(line1, point21) !== this.side(line1, point22) && this.side(line2, point11) !== this.side(line2, point12);
     },
 
     /**
@@ -86,8 +84,8 @@ export const Lines = {
             v2 = line2[1].sub(line2[0]),
             tv1 = line1[0].sub(line2[0]),
             tv2 = line1[1].sub(line2[1]),
-            d1 = Math.abs(tv1.cro(v1)/v1.len()),
-            d2 = Math.abs(tv2.cro(v1)/v1.len()),
+            d1 = Math.abs(tv1.cro(v1) / v1.len()),
+            d2 = Math.abs(tv2.cro(v1) / v1.len()),
             tv3 = v2.scl(d1/(d1 + d2));
 
         return line2[0].add(tv3);

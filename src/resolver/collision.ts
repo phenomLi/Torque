@@ -1,6 +1,6 @@
 import { Resolver } from "./resolver";
 import { Body } from "../body/body";
-import { Vector } from "../math/vector";
+import { Vector, _tempVector2, _tempVector1, _tempVector3 } from "../math/vector";
 import { Util } from "../common/util";
 import { Manifold, Collision, Contact } from "../collision/manifold";
 
@@ -75,16 +75,19 @@ export class CollisionSolver {
 
                 let normalImpulse = contact.normalImpulse,
                     tangentImpulse = contact.tangentImpulse,
-                    impulse = new Vector();
+                    impulse = _tempVector1;
                     
                 if (normalImpulse !== 0 || tangentImpulse !== 0) {
-                    // total impulse from contact
                     impulse.x = (normal.x * normalImpulse) + (tangent.x * tangentImpulse);
                     impulse.y = (normal.y * normalImpulse) + (tangent.y * tangentImpulse);
                     
-                    // apply impulse from contact
-                    !bodyA.sleeping && bodyA.applyImpulse(impulse, contact.offsetA);
-                    !bodyB.sleeping && bodyB.applyImpulse(impulse.inv(), contact.offsetB); 
+                    if(!bodyA.sleeping && !bodyA.fixed) {
+                        bodyA.applyImpulse(impulse, contact.offsetA);
+                    }
+
+                    if(!bodyB.sleeping && !bodyB.fixed) {
+                        bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
+                    }
                 }
             }
         }
@@ -111,6 +114,7 @@ export class CollisionSolver {
             maxFriction,
             relativeNormal,
             relativeTangent,
+            impulse = _tempVector3,
             i, j;
 
         for (i = 0; i < manifolds.length; i++) {
@@ -127,32 +131,50 @@ export class CollisionSolver {
             for(j = 0; j < collision.contacts.length; j++) {
                 contact = collision.contacts[j];
 
-                let velocityPointA = bodyA.velocity.add(contact.offsetA.croNum(bodyA.angularVelocity)),
-                    // 接触点相对B的速度
-                    velocityPointB = bodyB.velocity.add(contact.offsetB.croNum(bodyB.angularVelocity)),
-                    // 相对速度
-                    relativeVelocity = velocityPointB.sub(velocityPointA);
+                let velocityPointA, // 刚体A质心相对碰撞点的速度
+                    velocityPointB, // 刚体B质心相对碰撞点的速度
+                    relativeVelocity; // 相对速度
+
+                _tempVector1.x = 0;
+                _tempVector1.y = 0;
+                _tempVector2.x = 0;
+                _tempVector2.y = 0;
+
+                contact.offsetA.croNum(bodyA.angularVelocity, _tempVector1);
+                contact.offsetB.croNum(bodyB.angularVelocity, _tempVector2);
+                velocityPointA = bodyA.velocity.add(_tempVector1, _tempVector1);
+                velocityPointB = bodyB.velocity.add(_tempVector2, _tempVector2);
+                relativeVelocity = velocityPointB.sub(velocityPointA, _tempVector1);
 
                 // 计算法向相对速度
                 relativeNormal = normal.dot(relativeVelocity);
                 // 计算法向冲量
                 normalImpulse = manifold.restitution * (relativeNormal + contact.bias) * contact.shareNormal;
 
-                //console.log(relativeNormal);
-
                 // sequential impulse方法，收敛法向冲量
                 let oldNormalImpulse = contact.normalImpulse;
                 contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
                 normalImpulse = contact.normalImpulse - oldNormalImpulse;
 
-                // // 应用冲量
-                !bodyA.sleeping && bodyA.applyImpulse(normal.scl(normalImpulse), contact.offsetA);
-                !bodyB.sleeping && bodyB.applyImpulse(normal.scl(-normalImpulse), contact.offsetB); 
+                // 应用冲量
+                impulse.x = normal.x * normalImpulse;
+                impulse.y = normal.y * normalImpulse;
 
-                
-                velocityPointA = bodyA.velocity.add(contact.offsetA.croNum(bodyA.angularVelocity));
-                velocityPointB = bodyB.velocity.add(contact.offsetB.croNum(bodyB.angularVelocity));
-                relativeVelocity = velocityPointB.sub(velocityPointA);
+                if(!bodyA.sleeping && !bodyA.fixed) {
+                    bodyA.applyImpulse(impulse, contact.offsetA);
+                }
+
+                if(!bodyB.sleeping && !bodyB.fixed) {
+                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
+                }
+
+                // --------------------------------------------------------------------------------------------
+
+                contact.offsetA.croNum(bodyA.angularVelocity, _tempVector1);
+                contact.offsetB.croNum(bodyB.angularVelocity, _tempVector2);
+                velocityPointA = bodyA.velocity.add(_tempVector1, _tempVector1);
+                velocityPointB = bodyB.velocity.add(_tempVector2, _tempVector2);
+                relativeVelocity = velocityPointB.sub(velocityPointA, _tempVector1);
 
                 // 计算切向相对速度
                 relativeTangent = tangent.dot(relativeVelocity);
@@ -167,13 +189,29 @@ export class CollisionSolver {
                 tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
 
                 // 应用冲量
-                !bodyA.sleeping && bodyA.applyImpulse(tangent.scl(tangentImpulse), contact.offsetA);
-                !bodyB.sleeping && bodyB.applyImpulse(tangent.scl(-tangentImpulse), contact.offsetB); 
+                !bodyA.sleeping && bodyA.applyImpulse(tangent.scl(tangentImpulse, _tempVector1), contact.offsetA);
+                !bodyB.sleeping && bodyB.applyImpulse(tangent.scl(-tangentImpulse, _tempVector2), contact.offsetB); 
+
+                impulse.x = tangent.x * tangentImpulse;
+                impulse.y = tangent.y * tangentImpulse;
+
+                if(!bodyA.sleeping && !bodyA.fixed) {
+                    bodyA.applyImpulse(impulse, contact.offsetA);
+                }
+
+                if(!bodyB.sleeping && !bodyB.fixed) {
+                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
+                }
             }
         }
     }
     
 }
+
+
+
+
+
 
 
 

@@ -16,13 +16,14 @@ export interface CircleOpt extends BodyOpt {
 export class Circle extends Body {
     // 半径
     radius: number;
+    arc: Arc;
 
     constructor(opt: CircleOpt) {
         super(opt, bodyType.circle);
 
-        let arc = this.getArc();
-        this.parts = [arc];
-        this.bound = arc.bound;
+        this.arc = this.getArc();
+        this.parts = [this.arc];
+        this.bound = this.arc.bound;
     }
 
     getArea(): number {
@@ -50,6 +51,6 @@ export class Circle extends Body {
         this.origin.y += distance.y;
 
         // 位移圆形
-        this.parts.map(part => Arcs.translate(part, distance));
+        Arcs.translate(this.arc, distance);
     }
 }
