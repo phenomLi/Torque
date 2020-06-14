@@ -66,4 +66,4 @@ zr.add(rectShape);
 [戳这里](https://phenomli.github.io/Torque/)
 
 ## A.D.
-想了解制作物理引擎相关技术，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
+想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
