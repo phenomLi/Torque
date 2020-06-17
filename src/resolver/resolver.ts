@@ -26,10 +26,10 @@ export class Resolver {
     constructor(engine: Engine, opt: EngineOpt) {
         this.engine = engine;
 
-        this.velocityIterations = 10;
+        this.velocityIterations = 15;
         this.constraintIterations = 6;
         this.slop = 0.02;
-        this.biasFactor = 0.3;
+        this.biasFactor = 0.17;
         this.collisionSolver = new CollisionSolver(this);
 
         Util.merge(this, opt);

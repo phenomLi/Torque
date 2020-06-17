@@ -1,9 +1,7 @@
 import { Vector } from "../math/vector";
-import { Lines, LineSegment } from "./line";
 import { Bound } from "../collision/bound";
 import { Body } from "../body/body";
 import { Util } from "./util";
-import { Polygon } from "../body/polygon";
 
 // 顶点列表类型
 export type VertexList = Array<Vector>;
@@ -119,35 +117,19 @@ export const Vertices = {
     },
 
     /**
-     * 求顶点围成的所有面
-     * @param vertexList 
-     */
-    getEdge(vertexList: VertexList): LineSegment[] {
-        let edges = [],
-            v = vertexList,
-            j;
-
-        for(let i = 0; i < v.length; i++) {
-            j = (i + 1)%v.length;
-            edges.push([v[i], v[j]]);
-        }
-
-        return edges;
-    },
-
-    /**
      * 求顶点围成的所有面的轴
      * @param vertexList 
      */
     getAxes(vertexList: VertexList): Vector[] {
-        let edges = this.getEdge(vertexList),
-            edgeVector = null,
-            axes = [];
+        let v = vertexList,
+            axis, axes = [],
+            i, j;
 
-        for(let i = 0; i < edges.length; i++) {
-            edgeVector = edges[i][1].sub(edges[i][0]);
-            axes.push(edgeVector.nor().nol());
-        }
+            for(i = 0; i < v.length; i++) {
+                j = (i + 1) % v.length;
+                axis = v[j].sub(v[i]).nor().nol();
+                axes.push(axis);
+            }
 
         return axes;
     },  
@@ -330,131 +312,6 @@ export const Vertices = {
         }
 
         return parts;
-    },
-
-    /**
-     * 将多边形分割为多个小三角形
-     * 作用：分割成多个小三角形后，对每个小三角形生成包围盒，在碰撞检测可以遍历小三角形，进行包围盒相交检测，
-     * 可以过滤掉多边形没有发生碰撞的部分，大大提升性能
-     * 参考：https://blog.csdn.net/zzq61974/article/details/87635763
-     * @param poly
-     */
-    decomposition(poly: Poly): Poly[] {
-        let v = poly.vertexList,
-            // 当前正在切割的顶点
-            curClipVertex = v.slice(0),
-            // 保存所有凹点
-            caves: Vector[] = [],
-            // 当前顶点下标
-            curVertexIndex: number,
-            // 上一个顶点的下标
-            prevVertexIndex: number,
-            // 下一个顶点的下标
-            nextVertexIndex: number,
-            // 当前顶点
-            curVertex: Vector,
-            // 上一个点
-            prevVertex: Vector,
-            // 下一个点
-            nextVertex: Vector,
-            // 顶点集
-            vertexList: Vector[] = [],
-            // 轴集
-            axes: Vector[] = [],
-            // 小三角形集
-            parts: Poly[] = [],
-
-            part: Poly = null,
-
-            i;
-
-        // 若该图形顶点小于等于5，不用分割
-        if(curClipVertex.length <= 5) return [poly];
-
-        // 获取凹点
-        caves = this.findCaves(v);
-
-        while(true) {
-
-            // 3个顶点才能构成一个三角形，小于3个顶点说明分割完毕，退出
-            if(curClipVertex.length < 3) break;
-
-            // 寻找切割点
-            for(i = 1; i < curClipVertex.length; i++) {
-                curVertexIndex = i;
-                prevVertexIndex = i - 1;
-                nextVertexIndex = (i + 1)%curClipVertex.length;
-
-                curVertex = curClipVertex[curVertexIndex];
-                prevVertex = curClipVertex[prevVertexIndex];
-                nextVertex = curClipVertex[nextVertexIndex];
-
-                // 选取顶点
-                vertexList = [prevVertex, curVertex, nextVertex];
-
-                // 若当前图形没有凹点（凸多边形）或若当前顶点不是凹点并且当前三角形不包含凹点，则取用
-                if(
-                    caves.length === 0 ||
-                    (caves.indexOf(curVertex) < 0 && !caves.some(point => this.isContains(vertexList, point)))
-                ) {
-                    break;
-                };
-            }
-            
-            // 若上一个顶点和当前顶点形成的边不穿过原多边形中（即上一个顶点和当前顶点形成的边是原多边形的一条边）
-            // 那么取其边和轴
-            if(!Lines.isIntersectWithVertices([prevVertex, curVertex], v)) {
-                axes.push(poly.axes[prevVertexIndex]);
-            }
-
-            // 与上面同理
-            if(!Lines.isIntersectWithVertices([curVertex, nextVertex], v)) {
-                axes.push(poly.axes[curVertexIndex]);
-            }
-
-            // 与上面同理
-            if(!Lines.isIntersectWithVertices([prevVertex, nextVertex], v)) {
-                axes.push(poly.axes[nextVertexIndex]);
-            }
-
-            part = Vertices.create(poly.body, vertexList)
-            part.axes = axes;
-            parts.push(part);
-
-            // 在图形中移除一个分割点
-            curClipVertex.splice(curVertexIndex, 1);
-            
-            vertexList = [];
-            axes = [];
-        }
-
-        return parts;
-    },
-
-
-    /**
-     * 求两顶点围成的多边形的交点
-     * 由于在本引擎中，相交的只会是两个凸多边形，所以相交点数量上限为2个，到达两个便return
-     * @param edges1
-     * @param edges2
-     */
-    intersection(edges1: LineSegment[], edges2: LineSegment[]): Vector[] {
-            // 待剪辑顶点集
-        let intersectPoint = [],
-            i, j;
-
-        for(i = 0; i < edges1.length; i++) {
-            for(j = 0; j < edges2.length; j++) {
-                if(Lines.isIntersect(edges1[i], edges2[j])) {
-                    intersectPoint.push(Lines.intersection(edges1[i], edges2[j]));
-
-                    // 求得2个交点时就返回
-                    if(intersectPoint.length >= 2) return intersectPoint;
-                }
-            }
-        }
-
-        return intersectPoint;
     },
 
     /**

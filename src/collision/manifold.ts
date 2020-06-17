@@ -22,9 +22,10 @@ export class Contact {
     tangentImpulse: number;
     offsetA: Vector;
     offsetB: Vector;
+    depth: number;
     bias: number;
 
-    constructor(vertex: Vector) {
+    constructor(vertex: Vector, depth: number) {
         this.vertex.x = vertex.x;
         this.vertex.y = vertex.y;
         this.shareNormal = 0;
@@ -32,6 +33,7 @@ export class Contact {
         this.inverseMass = 0;
         this.normalImpulse = 0;
         this.tangentImpulse = 0;
+        this.depth = depth;
         this.bias = 0;
     }
 }
@@ -56,10 +58,6 @@ export class Collision {
     tangent: Vector = new Vector();
     // 接触点
     contacts: Contact[];
-    // 穿透向量
-    penetration: Vector = new Vector();
-    // 穿透深度
-    depth: number;
     // 是否发生了碰撞
     collide: boolean;
 };

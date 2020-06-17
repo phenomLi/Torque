@@ -2,6 +2,8 @@ import { Vector, _tempVector1 } from "../math/vector";
 import { Poly, VertexList, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
 import { Collision, Contact, Geometry } from "./manifold";
+import { VClip, edge } from "./vClip";
+import { VClosest } from "./vClosest";
 
 
 
@@ -21,14 +23,11 @@ export class SAT {
     polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
         let canReuse: boolean = this.canReuseCollision(poly, geometry, prevCollision),
             collision: Collision = null,
-            result = null,
-            oldContacts: Contact[] = null;
+            result = null;
         
         // 若能用缓存，使用缓存
         if(canReuse) {
             collision = prevCollision;
-            oldContacts = prevCollision.contacts;
-
             result = this.detect(poly, geometry, [collision.normal]);
 
             if(result.minOverlap < 0) {
@@ -54,7 +53,7 @@ export class SAT {
 
             collision.normal.x = normal.x;
             collision.normal.y = normal.y;
-            collision.tangent = normal.nor(collision.tangent);
+            collision.tangent = normal.nor();
 
             collision.partA = poly;
             collision.partB = geometry;
@@ -62,20 +61,8 @@ export class SAT {
             collision.bodyB = geometry.body;
         }
 
-        collision.depth = result.minOverlap;
-        collision.penetration = collision.normal.scl(collision.depth, collision.penetration);
-        collision.contacts = this.findContacts(poly, geometry, collision.normal, collision.depth);
+        collision.contacts = this.findContacts(poly, geometry, collision.normal, result.minOverlap);
         collision.collide = true;
-
-        // warm start
-        if(oldContacts) {
-            for(let i = 0; i < oldContacts.length; i++) {
-                if(collision.contacts[i]) {
-                    collision.contacts[i].normalImpulse = oldContacts[i].normalImpulse;
-                    collision.contacts[i].tangentImpulse = oldContacts[i].tangentImpulse;
-                }
-            }
-        }
 
         return collision;
     }
@@ -106,14 +93,11 @@ export class SAT {
 
         collision.normal.x = normal.x;
         collision.normal.y = normal.y;
-        collision.tangent = normal.nor(collision.tangent).nol();
+        collision.tangent = normal.nor().nol();
 
-        collision.depth = overlaps;
-        collision.penetration = normal.scl(overlaps, collision.penetration);
+        arcA.center.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2, _tempVector1)
 
-        arcA.center.loc(normal.inv(_tempVector1), arcA.radius - overlaps/2, _tempVector1)
-
-        collision.contacts = [new Contact(_tempVector1)];
+        collision.contacts = [new Contact(_tempVector1, overlaps)];
         collision.collide = true;
 
         return collision;
@@ -129,7 +113,6 @@ export class SAT {
      * 进行分离轴检测
      * @param poly 
      * @param geometry 
-     * @param collision 
      * @param axes 
      */
     private detect(poly: Poly, geometry: Geometry, axes: Vector[]): { minOverlap: number, index: number } {
@@ -223,72 +206,6 @@ export class SAT {
     }
 
     /**
-     * 寻找碰撞点
-     * @param poly 
-     * @param geometry 
-     * @param collision 
-     */
-    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
-        let potentialContactsA: Vector[] = [],
-            potentialContactsB: Vector[] = [],
-            contacts: Contact[] = [],
-            normalInv = normal.inv(),
-            i;
-
-        if(geometry instanceof Poly) {
-            let vertexListA = poly.vertexList,
-                vertexListB = (<Poly>geometry).vertexList;
-
-            // 寻找多边形A最接近多边形B的两个点
-            potentialContactsA = this.orderProjectionVertexInNormalDirection(vertexListA, normal);
-
-            for(i = 0; i < potentialContactsA.length; i++) {
-                // 查看这些点是否在多边形B内部
-                if(Vertices.isContains(vertexListB, potentialContactsA[i])) {
-                    // 如果是，则这个点记为一个碰撞点
-                    contacts.push(new Contact(potentialContactsA[i]));
-                } 
-                else {
-                    if(i !== 0) break;
-                }
-            }
-
-            if(contacts.length >= 2) return contacts;
-
-            // 同理上面
-            potentialContactsB = this.orderProjectionVertexInNormalDirection(vertexListB, normalInv);
-
-            for(i = 0; i < potentialContactsB.length; i++) {
-                if(Vertices.isContains(vertexListA, potentialContactsB[i])) {
-                    contacts.push(new Contact(potentialContactsB[i]));
-                }
-                else {
-                    if(i !== 0) break;
-                } 
-            }
-
-            // 边界情况：即没有碰撞点的情况
-            if(contacts.length < 1) {
-                contacts.push(new Contact(potentialContactsA[0]));
-            }
-        }
-        else {
-            contacts.push(new Contact((<Arc>geometry).center.loc(normal, (<Arc>geometry).radius - depth/2)));
-        }
-
-        return contacts;
-    }
-
-    /**
-     * 将顶点按照在法线上投影的大小顺序排序
-     * @param vertexList 
-     * @param normal 
-     */
-    private orderProjectionVertexInNormalDirection(vertexList: VertexList, normal: Vector): Vector[] {
-        return vertexList.slice(0).sort((vertexA, vertexB) => vertexA.dot(normal) - vertexB.dot(normal));
-    }
-
-    /**
      * 查看碰撞缓存是否可以复用
      * @param geometryA
      * @param geometryB
@@ -307,6 +224,24 @@ export class SAT {
         
         // 碰撞缓存不存在，直接判定无法复用
         return false;
+    }
+
+    /**
+     * 寻找碰撞点
+     * @param poly 
+     * @param geometry 
+     * @param normal 
+     * @param depth 
+     */
+    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
+        if(geometry instanceof Poly) {
+            return VClosest(poly, geometry, normal, depth);
+            // return VClip(poly, geometry, normal, depth);
+        }
+        else {
+            let vertex = (<Arc>geometry).center.loc(normal, (<Arc>geometry).radius - depth / 2);
+            return [new Contact(vertex, depth)];
+        }
     }
 };
 

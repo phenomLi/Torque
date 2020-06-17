@@ -47,7 +47,7 @@ createWall(canvasWidth, canvasHeight, 30, {
     fixed: true,
     friction: 0.3,
     fill: null,
-    stroke: '#ddd'
+    stroke: '#333'
 });
 
 
@@ -55,7 +55,7 @@ creator.rect(canvasWidth / 2 - 50, canvasHeight / 2 - 50, 100, 100, {
     fixed: true,
     friction: 0.3,
     fill: null,
-    stroke: '#ddd'
+    stroke: '#333'
 });
 
 
@@ -63,6 +63,7 @@ const options = {
     mass: 10,
     friction: 0.3,
     // textFill: '#000',
+    stroke: '#333',
     methods: {
         sleepStart(body) {
             body.data.attr('style', {

@@ -71,24 +71,7 @@ export class CollisionSolver {
                 contact.shareNormal = 1 / (invMassNormal * contactNum);
                 contact.shareTangent = 1 / (invMassTangent * contactNum);
 
-                contact.bias = this.resolver.biasFactor * 1 / dt * Math.max(0, collision.depth + this.resolver.slop);
-
-                let normalImpulse = contact.normalImpulse,
-                    tangentImpulse = contact.tangentImpulse,
-                    impulse = _tempVector1;
-                    
-                if (normalImpulse !== 0 || tangentImpulse !== 0) {
-                    impulse.x = (normal.x * normalImpulse) + (tangent.x * tangentImpulse);
-                    impulse.y = (normal.y * normalImpulse) + (tangent.y * tangentImpulse);
-                    
-                    if(!bodyA.sleeping && !bodyA.fixed) {
-                        bodyA.applyImpulse(impulse, contact.offsetA);
-                    }
-
-                    if(!bodyB.sleeping && !bodyB.fixed) {
-                        bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
-                    }
-                }
+                contact.bias = this.resolver.biasFactor * (1 / dt) * Math.max(0, contact.depth + this.resolver.slop);
             }
         }
 
@@ -189,9 +172,6 @@ export class CollisionSolver {
                 tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
 
                 // 应用冲量
-                !bodyA.sleeping && bodyA.applyImpulse(tangent.scl(tangentImpulse, _tempVector1), contact.offsetA);
-                !bodyB.sleeping && bodyB.applyImpulse(tangent.scl(-tangentImpulse, _tempVector2), contact.offsetB); 
-
                 impulse.x = tangent.x * tangentImpulse;
                 impulse.y = tangent.y * tangentImpulse;
 
