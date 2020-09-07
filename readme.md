@@ -60,6 +60,7 @@ zr.add(rectShape);
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 - 经过轴过滤优化的 SAT
 - 复合刚体（TODO） 
+- 弹簧约束（TODO）
 
 ## demo
 [戳这里](https://phenomli.github.io/Torque/)
