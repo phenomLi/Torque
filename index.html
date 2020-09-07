@@ -28,6 +28,7 @@
 <div id="canvas"></div>
 
 <button id="status">暂停</button>
+<button id="test">测试</button>
 <div id="mouse_pos"></div>
 
 <script src="./demo/lib/zrender.min.js"></script>
@@ -36,10 +37,11 @@
 <script src="./demo/demo.js"></script>
 <script>
 
-let engineStatus = true;
+let engineStatus = true; 
 
 const mouse_pos = document.getElementById('mouse_pos'),
-      status = document.getElementById('status');
+      status = document.getElementById('status'),
+      test = document.getElementById('test');
 
 canvas.addEventListener('mousemove', e => {
     mouse_pos.innerText = 'x: ' + e.offsetX + '  y: ' + e.offsetY;
@@ -57,6 +59,12 @@ status.addEventListener('click', () => {
         creator.t.pause();
     }
 });
+
+test.addEventListener('click', () => {
+    creator.t.test();
+});
+
+creator.t.start();
 
 
 </script>

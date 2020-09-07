@@ -31,9 +31,6 @@ export class Rect extends Polygon {
             leftBottom = leftTop.add(new Vector(0, this.height)),
             poly = Vertices.create(this, [leftTop, rightTop, rightBottom, leftBottom]);
 
-            // 筛选矩形的轴
-            poly.axes = Vertices.uniqueAxes(poly.axes);
-
         return poly;
     }
 

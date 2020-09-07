@@ -1,20 +1,71 @@
-import { Resolver } from "./resolver";
 import { Body } from "../body/body";
 import { Vector, _tempVector2, _tempVector1, _tempVector3 } from "../math/vector";
 import { Util } from "../common/util";
-import { Manifold, Collision, Contact } from "../collision/manifold";
+import { Manifold, Collision } from "../collision/manifold";
 
 
+// 接触约束
+export class Contact {
+    position: Vector;
+    inverseMass: number;
+    shareNormal: number;
+    shareTangent: number;
+    normalImpulse: number;
+    tangentImpulse: number;
+    offsetA: Vector;
+    offsetB: Vector;
+    depth: number;
+    bias: number;
+
+    constructor(vertex: Vector, depth: number) {
+        this.position = vertex;
+        this.shareNormal = 0;
+        this.shareTangent = 0;
+        this.inverseMass = 0;
+        this.normalImpulse = 0;
+        this.tangentImpulse = 0;
+        this.depth = depth;
+        this.bias = 0;
+    }
+}
 
 /**
  * 碰撞求解器
  */
 
-export class CollisionSolver {
-    private resolver: Resolver;
+export class ContactConstraint {
+    // 碰撞求解迭代次数
+    private iterations: number;
+    // 穿透修正误差
+    private slop: number;
+    // 偏移因子
+    private biasFactor: number;
 
-    constructor(resolver: Resolver) {
-        this.resolver = resolver;
+    constructor() {
+        this.iterations = 20;
+        this.slop = 0.02;
+        this.biasFactor = 0.2;
+    }
+
+    /**
+     * 创建一个接触约束
+     * @param vertex 
+     * @param depth 
+     */
+    create(vertex: Vector, depth: number): Contact {
+        return new Contact(vertex, depth);
+    }
+
+    /**
+     * 求解接触约束
+     * @param manifolds 
+     * @param dt 
+     */
+    solve(manifolds: Manifold[], dt: number) {
+        this.preSolveVelocity(manifolds, dt);
+        for(let i = 0; i < this.iterations; i++) {
+            this.solveVelocity(manifolds, dt);
+        }
     }
 
     /**
@@ -30,7 +81,7 @@ export class CollisionSolver {
             bodyB: Body,
             normal: Vector,
             tangent: Vector,
-            contactNum, i, j;
+            i, j;
 
         for (i = 0; i < manifolds.length; ++i) {
             manifold = manifolds[i];
@@ -42,15 +93,14 @@ export class CollisionSolver {
             tangent = collision.tangent;
             bodyA = collision.bodyA;
             bodyB = collision.bodyB;
-            contactNum = manifold.contacts.length;
 
             for(j = 0; j < collision.contacts.length; j++) {
                 contact = collision.contacts[j];
 
                 // 接触点到刚体A质心的距离
-                contact.offsetA = contact.vertex.sub(bodyA.position),
+                contact.offsetA = contact.position.sub(bodyA.position),
                 // 接触点到刚体B质心的距离
-                contact.offsetB = contact.vertex.sub(bodyB.position);
+                contact.offsetB = contact.position.sub(bodyB.position);
                 
                 let invMassNormal = manifold.inverseMass,
                     invMassTangent = manifold.inverseMass,
@@ -68,10 +118,10 @@ export class CollisionSolver {
                 invMassTangent += bodyB.invInertia * (r2.dot(r2) - rt2 * rt2);
 
                 // 保存 J(M^-1)(J^T)得倒数
-                contact.shareNormal = 1 / (invMassNormal * contactNum);
-                contact.shareTangent = 1 / (invMassTangent * contactNum);
+                contact.shareNormal = 1 / invMassNormal;
+                contact.shareTangent = 1 / invMassTangent;
 
-                contact.bias = this.resolver.biasFactor * (1 / dt) * Math.max(0, contact.depth + this.resolver.slop);
+                contact.bias = this.biasFactor * (1 / dt) * Math.max(0, contact.depth - this.slop);
             }
         }
 
@@ -144,11 +194,11 @@ export class CollisionSolver {
                 impulse.y = normal.y * normalImpulse;
 
                 if(!bodyA.sleeping && !bodyA.fixed) {
-                    bodyA.applyImpulse(impulse, contact.offsetA);
+                    bodyA.applyImpulse(impulse, contact.offsetA, dt);
                 }
 
                 if(!bodyB.sleeping && !bodyB.fixed) {
-                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
+                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
                 }
 
                 // --------------------------------------------------------------------------------------------
@@ -176,16 +226,15 @@ export class CollisionSolver {
                 impulse.y = tangent.y * tangentImpulse;
 
                 if(!bodyA.sleeping && !bodyA.fixed) {
-                    bodyA.applyImpulse(impulse, contact.offsetA);
+                    bodyA.applyImpulse(impulse, contact.offsetA, dt);
                 }
 
                 if(!bodyB.sleeping && !bodyB.fixed) {
-                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
+                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
                 }
             }
         }
     }
-    
 }
 
 

@@ -2,7 +2,7 @@
  * 刚体基类：所有刚体继承自Body
  */
 
-import { Vector } from "../math/vector";
+import { Vector, _tempVector1 } from "../math/vector";
 import { Bound } from "../collision/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
@@ -178,7 +178,7 @@ export class Body {
         this.force = new Vector(0, 0);
         this.torque = 0;
         this.friction = 0.4;
-        this.restitution = 1;
+        this.restitution = 0.9;
         this.constraint = null;
         this.fixed = false;
         this.sleeping = false;
@@ -337,7 +337,7 @@ export class Body {
      * @param offset 作用点（本地坐标系）
      * @param dt 步长
      */
-    applyImpulse(impulse: Vector, offset: Vector) {
+    applyImpulse(impulse: Vector, offset: Vector, dt: number) {
         this.velocity.x += impulse.x * this.invMass;
         this.velocity.y += impulse.y * this.invMass;
         this.angularVelocity += this.invInertia * offset.cro(impulse);
@@ -390,10 +390,13 @@ export class Body {
         this.position.y += dy;
         this.rotation += dr;
 
+        _tempVector1.x = dx;
+        _tempVector1.y = dy;
+
         //位移刚体
-        this.translate(new Vector(dx, dy));
+        this.translate(_tempVector1);
         // 旋转刚体
-        if(this.angularVelocity !== 0) {
+        if(dr !== 0) {
             this.rotate(dr, this.position);
         }
 

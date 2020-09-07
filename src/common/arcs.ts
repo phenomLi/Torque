@@ -8,17 +8,17 @@ import { Bound } from "../collision/bound";
 // 一个圆形信息包
 export class Arc {
     id: number;
-    center: Vector;
+    centroid: Vector;
     radius: number;
     body: Circle;
     bound: Bound
 
-    constructor(body: Circle, center: Vector, radius: number) {
+    constructor(body: Circle, centroid: Vector, radius: number) {
         this.id = body.id;
         this.body = body;
-        this.center = center;
+        this.centroid = centroid;
         this.radius = radius;
-        this.bound = Arcs.getBound(center, radius);
+        this.bound = Arcs.getBound(centroid, radius);
     }
 }
 
@@ -40,7 +40,7 @@ export const Arcs = {
      * @param circleB 
      */
     distance(circleA: Arc, circleB: Arc): number {
-        return circleA.center.sub(circleB.center).len();
+        return circleA.centroid.sub(circleB.centroid).len();
     },
 
     /**
@@ -48,13 +48,13 @@ export const Arcs = {
      * @param vertices 顶点信息
      */
     getAxes(circle: Arc, poly: Poly): Vector {
-        let closestVertex = Vertices.getClosestVertex(circle.center, poly.vertexList);
-        return closestVertex.sub(circle.center).nol();
+        let closestVertex = Vertices.getClosestVertex(circle.centroid, poly.vertexList);
+        return closestVertex.sub(circle.centroid).nol();
     },
 
-    getBound(center: Vector, radius: number): Bound {
-        let min = new Vector(center.x - radius, center.y - radius),
-            max = new Vector(center.x + radius, center.y + radius);
+    getBound(centroid: Vector, radius: number): Bound {
+        let min = new Vector(centroid.x - radius, centroid.y - radius),
+            max = new Vector(centroid.x + radius, centroid.y + radius);
 
         return new Bound(min, max);
     },
@@ -64,7 +64,7 @@ export const Arcs = {
      * @param axis 
      */
     Projection(circle: Arc, axis: Vector): {min: number, max: number} {
-        let len = circle.center.pro(axis);
+        let len = circle.centroid.pro(axis);
 
         return {
             min: len - circle.radius,
@@ -78,7 +78,7 @@ export const Arcs = {
      * @param point 
      */
     isContains(circle: Arc, point: Vector): boolean {
-        return circle.radius*circle.radius - circle.center.sub(point).len_s() > 0; 
+        return circle.radius*circle.radius - circle.centroid.sub(point).len_s() > 0; 
     },
 
     /**
@@ -87,8 +87,8 @@ export const Arcs = {
      * @param distance 位移向量
      */
     translate(arc: Arc, distance: Vector) {
-        arc.center.x += distance.x;
-        arc.center.y += distance.y;
+        arc.centroid.x += distance.x;
+        arc.centroid.y += distance.y;
 
         // 位移包围盒
         arc.bound.translate(distance);

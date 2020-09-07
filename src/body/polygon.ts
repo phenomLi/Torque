@@ -73,10 +73,10 @@ export class Polygon extends Body {
         // 若多边形是凹多边形, 位移子多边形包围盒
         if(this.isConcave) {
             for(let i = 0; i < this.parts.length; i++) {
-                let part = this.parts[i];
+                let part: Poly = this.parts[i];
 
-                part.center.x += distance.x;
-                part.center.y += distance.y;
+                part.centroid.x += distance.x;
+                part.centroid.y += distance.y;
                 part.bound.translate(distance);
             }
         }
@@ -89,9 +89,9 @@ export class Polygon extends Body {
         // 若多边形是凹多边形, 更新子多边形包围盒
         if(this.isConcave) {
             for(let i = 0; i < this.parts.length; i++) {
-                let part = this.parts[i];
+                let part: Poly = this.parts[i];
 
-                part.center.rot(radian, point, part.center);
+                part.centroid.rot(radian, point, part.centroid);
                 part.bound.update(part.vertexList);
             }
         }

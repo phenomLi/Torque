@@ -1,6 +1,6 @@
-import { VertexList, Poly } from "../common/vertices";
-import { Contact } from "./manifold";
+import { Poly } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
+import { Contact } from "../constraint/contact";
 
 export type edge = { start: Vector; end: Vector };
 export type edgeInfo = {
@@ -140,7 +140,7 @@ export function VClip(poly1: Poly, poly2: Poly, normal: Vector, depth: number): 
         return vertex.map(item => new Contact(item, depth));
     }
     
-    if(edges.ref.poly.center.sub(ref.start).dot(refn) <= 0) {
+    if(edges.ref.poly.centroid.sub(ref.start).dot(refn) <= 0) {
         refn = refn.inv();
     }
 

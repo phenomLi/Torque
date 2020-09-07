@@ -3,6 +3,7 @@ import { Vector } from "../math/vector";
 import { Util } from "../common/util";
 import { Poly } from "../common/vertices";
 import { Arc } from "../common/arcs";
+import { Contact } from "../constraint/contact";
 
 
 /**
@@ -10,33 +11,6 @@ import { Arc } from "../common/arcs";
  */
 
 export type Geometry = Poly | Arc;
-
-
-// 接触点信息
-export class Contact {
-    vertex: Vector = new Vector();
-    inverseMass: number;
-    shareNormal: number;
-    shareTangent: number;
-    normalImpulse: number;
-    tangentImpulse: number;
-    offsetA: Vector;
-    offsetB: Vector;
-    depth: number;
-    bias: number;
-
-    constructor(vertex: Vector, depth: number) {
-        this.vertex.x = vertex.x;
-        this.vertex.y = vertex.y;
-        this.shareNormal = 0;
-        this.shareTangent = 0;
-        this.inverseMass = 0;
-        this.normalImpulse = 0;
-        this.tangentImpulse = 0;
-        this.depth = depth;
-        this.bias = 0;
-    }
-}
 
 
 /**
@@ -77,8 +51,6 @@ export class Manifold {
     partB: Geometry;
     // 碰撞信息
     collision: Collision;
-    // 碰撞接触点
-    contacts: Contact[] = [];
     // 激活状态
     // 激活状态的意思即上一次更新时流形是否发生碰撞，若是，则表示该流形在激活状态
     isActive: boolean;
@@ -103,7 +75,6 @@ export class Manifold {
         this.partB = collision.partB;
         this.id = Util.compositeId(this.partA.id, this.partB.id);
         this.collision = collision;
-        this.contacts = collision.contacts;
         this.isActive = true;
         this.confirmedActive = true;
         this.timeCreated = timeStamp;
@@ -134,7 +105,6 @@ export class Manifold {
             this.restitution = (bodyA.restitution + bodyB.restitution) / 2;
             this.inverseMass = bodyA.invMass + bodyB.invMass;
 
-            this.contacts = collision.contacts;
             this.toggleActive(true, timeStamp);
         }
         // 否则
@@ -153,9 +123,6 @@ export class Manifold {
 
         if(active) {
             this.timeUpdated = timeStamp;
-        }
-        else {
-            this.contacts = [];
         }
     }
 }

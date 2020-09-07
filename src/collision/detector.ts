@@ -15,7 +15,7 @@ export class Detector {
     narrowPhase: NarrowPhase;   
 
     constructor(engine: Engine, opt: EngineOpt) {
-        this.broadPhase = new BroadPhase(engine);
-        this.narrowPhase = new NarrowPhase(engine);
+        this.broadPhase = new BroadPhase(engine, opt);
+        this.narrowPhase = new NarrowPhase(engine, opt);
     }
 }

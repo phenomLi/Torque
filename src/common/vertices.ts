@@ -3,8 +3,10 @@ import { Bound } from "../collision/bound";
 import { Body } from "../body/body";
 import { Util } from "./util";
 
+
 // 顶点列表类型
 export type VertexList = Array<Vector>;
+
 
 // 一个顶点信息包
 export class Poly {
@@ -14,14 +16,14 @@ export class Poly {
     body: Body;
     bound: Bound;
     isConcave: boolean;
-    center: Vector;
+    centroid: Vector;
 
     constructor(body: Body, vertexList: VertexList) {
         this.id = Util.id();
         this.body = body;
         this.vertexList = vertexList;
         this.axes = Vertices.getAxes(vertexList);
-        this.center = Vertices.getCenter(vertexList);
+        this.centroid = Vertices.getCentroid(vertexList);
         this.bound = Vertices.getBound(vertexList);
     }
 };
@@ -122,11 +124,12 @@ export const Vertices = {
      */
     getAxes(vertexList: VertexList): Vector[] {
         let v = vertexList,
-            axis, axes = [],
+            axis: Vector, axes: Vector[] = [],
             i, j;
 
             for(i = 0; i < v.length; i++) {
                 j = (i + 1) % v.length;
+
                 axis = v[j].sub(v[i]).nor().nol();
                 axes.push(axis);
             }
@@ -163,18 +166,18 @@ export const Vertices = {
      * @param axes 要筛选的轴
      */
     uniqueAxes(axes: Vector[]): Vector[] {
-        let axis,
-            tmpAxes = [],
+        let axisVector: Vector,
+            tmpAxes: Vector[] = [],
             axesTable = {},
             i, gradient;
 
         for (i = 0; i < axes.length; i++) {
-            axis = axes[i];
-            gradient = (axis.y === 0) ? Infinity : (axis.x / axis.y);
+            axisVector = axes[i];
+            gradient = (axisVector.y === 0) ? Infinity : (axisVector.x / axisVector.y);
             
             // 限制精度
             gradient = gradient.toFixed(3).toString();
-            axesTable[gradient] = axis;
+            axesTable[gradient] = axes[i];
         }
 
         Object.keys(axesTable).map(item => {
@@ -207,7 +210,7 @@ export const Vertices = {
         }
         
         // 更新几何中心
-        poly.center.rot(radian, point, poly.center);
+        poly.centroid.rot(radian, point, poly.centroid);
 
         // 更新包围盒
         poly.bound.update(poly.vertexList);
@@ -227,8 +230,8 @@ export const Vertices = {
             v[i].y += distance.y;
         }
         
-        poly.center.x += distance.x;
-        poly.center.y += distance.y;
+        poly.centroid.x += distance.x;
+        poly.centroid.y += distance.y;
 
         // 位移包围盒
         poly.bound.translate(distance);
@@ -322,18 +325,17 @@ export const Vertices = {
      */
     isContains(vertexList: VertexList, point: Vector): boolean {
         let v = vertexList,
-            i, j, len = vertexList.length, 
-            flag = false;
+            cur, next, len = vertexList.length;
 
-        for(i = 0, j = len - 1; i < len; j = i++) {
-            if(v[i].eql(point)) return false;
+        for(let i = 0; i < len; i++) {
+            cur = v[i], next = v[(i + 1) % len];
 
-            if(((v[i].y > point.y) != (v[j].y > point.y)) 
-            && (point.x < (v[j].x - v[i].x)*(point.y - v[i].y)/(v[j].y - v[i].y) + v[i].x))
-                flag = !flag;
+            if((point.x - cur.x) * (next.y - cur.y) + (point.y - cur.y) * (cur.x - next.x) > 0) {
+                return false;
+            } 
         }
 
-        return flag;
+        return true;
     },
 
     /**

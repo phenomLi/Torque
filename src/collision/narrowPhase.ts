@@ -2,7 +2,7 @@ import { SAT } from "./sat";
 import { broadPhasePair } from "./broadPhase";
 import { Arc } from "../common/arcs";
 import { Poly } from "../common/vertices";
-import { Engine } from "../core/engine";
+import { Engine, EngineOpt } from "../core/engine";
 import { Collision, Geometry } from "./manifold";
 import { Util } from "../common/util";
 import { ManifoldTable } from "./manifoldTable";
@@ -19,10 +19,9 @@ export class NarrowPhase {
     collisions: Collision[];
 
 
-    constructor(engine: Engine) {
+    constructor(engine: Engine, opt: EngineOpt) {
         this.engine = engine;
-
-        this.SAT = new SAT();
+        this.SAT = new SAT(opt);
     }
 
     /**
@@ -51,7 +50,11 @@ export class NarrowPhase {
                     partB = partsB[k];
 
                     // 两个子图形包围盒不相交，跳过
-                    if(!partA.bound.isIntersect(partB.bound)) continue;
+                    let axesA = partA instanceof Poly? partA.axes: [],
+                        axesB = partB instanceof Poly? partB.axes: [],
+                        intersection = partA.bound.isIntersect(partB.bound);
+
+                    if(!intersection) continue;
 
                     prevCollision = this.getPrevCollision(partA, partB, this.engine.manifoldTable);
 

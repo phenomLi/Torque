@@ -8,8 +8,6 @@ import { Util } from "../common/util";
 export class ManifoldTable {
     // 是否开启缓存
     enableCache: boolean;
-    // 是否开启缓存刷新
-    enableManifoldRemove: boolean;
     // 缓存移除时间阈值
     manifoldRemoveThreshold: number;
     // 流形表
@@ -24,8 +22,7 @@ export class ManifoldTable {
     collisionEnd: Manifold[];
 
     constructor(opt: EngineOpt) {
-        this.enableCache = true;
-        this.enableManifoldRemove = true;
+        this.enableCache = false;
         this.manifoldRemoveThreshold = 1000;
         this.table = {};
         this.list = [];

@@ -73,44 +73,52 @@ class Creator {
         rectShape.t = rect;
     }
 
-    tri(x, y, e, opt) {
-        let hw = e / 2,
-            h = Math.cos(Math.PI / 6) * e, 
-            lh = hw / Math.cos(Math.PI / 6),
-            sh = h - lh,
-            localV = [[0, -lh], [hw, sh], [-hw, sh]];
+    isogon(x, y, r, n, opt) {
+        if (n < 2) {
+            return false;
+        }
 
-        let tri = Torque.body.Polygon(x, y, localV, opt),
-            triShape = new zrender.Isogon({
+        let PI = Math.PI,
+            dStep = 2 * PI / n,
+            deg = -PI / 2,
+            localV = [[x + r * Math.cos(deg), y + r * Math.sin(deg)]];
+
+        for (let i = 0, end = n - 1; i < end; i++) {
+            deg += dStep;
+            localV.push([x + r * Math.cos(deg), y + r * Math.sin(deg)]);
+        }
+
+        let isogon = Torque.body.Polygon(x, y, localV, opt),
+            isogonShape = new zrender.Isogon({
                 position: [x, y],
                 origin: [0, 0],
                 rotation: -opt.rotation || 0,
                 shape: {
                     x: 0, 
                     y: 0,
-                    n: 3,
-                    r: lh
+                    n,
+                    r
                 },
                 style: {
                     fill: opt.fill,
                     stroke: opt.stroke,
-                    text: tri.id,
+                    text: isogon.id,
                     transformText: true,
                     textFill: opt.textFill
                 }
             });
 
-        tri.setRender(function(body) {
-            triShape.attr({
+            isogon.setRender(function(body) {
+            isogonShape.attr({
                 rotation: -body.rotation,
                 position: [body.position.x, body.position.y]
             });
         });
 
-        this.t.append(tri);
-        this.zr.add(triShape);
-        tri.setData(triShape);
-        triShape.t = tri;
+        this.t.append(isogon);
+        this.zr.add(isogonShape);
+        isogon.setData(isogonShape);
+        isogonShape.t = isogon;
     }
 
     polygon(x, y, points, opt) {

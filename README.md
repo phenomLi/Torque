@@ -51,7 +51,6 @@ zr.add(rectShape);
 ## feature
 - 休眠/唤醒技术
 - Sequential Impulses
-- Warm Starting
 - 碰撞缓存
 - 碰撞过滤
 - 动态 dt
@@ -59,7 +58,7 @@ zr.add(rectShape);
 - 固定的刚体
 - 摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
-- 优化的 SAT （TODO）
+- 经过轴过滤优化的 SAT
 - 复合刚体（TODO） 
 
 ## demo

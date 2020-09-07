@@ -1,7 +1,7 @@
 import { Body } from "../body/body";
 import { Util } from "../common/util";
 import { Bound } from "./bound";
-import { Engine } from "../core/engine";
+import { Engine, EngineOpt } from "../core/engine";
 
 /**
  * 粗检测阶段，使用Sweep & Prune算法
@@ -20,7 +20,7 @@ export type broadPhasePair = {
 export class BroadPhase {
     engine: Engine;
 
-    constructor(engine: Engine) {
+    constructor(engine: Engine, opt: EngineOpt) {
         this.engine = engine;
     }
 
@@ -86,7 +86,7 @@ export class BroadPhase {
                 if(bodies[i].bound.isIntersect(bodies[j].bound)) {
                     broadPhasePairList.push({
                         bodyA: bodies[i],
-                        bodyB: bodies[j]
+                        bodyB: bodies[j],
                     });
                 }
             }

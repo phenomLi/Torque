@@ -3,12 +3,12 @@ import { Vector } from "../math/vector";
 import { Util } from "../common/util";
 import { TimeStepper } from "./timeStepper";
 import { Detector } from "../collision/detector";
-import { Resolver } from "../resolver/resolver";
 import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
 import { broadPhasePair } from "../collision/broadPhase";
 import { Event } from "../event/eventEmitter";
+import { ContactConstraint } from "../constraint/contact";
 
 
 /**
@@ -30,33 +30,11 @@ export interface EngineOpt {
     enableCollisionResolve: boolean;
     // 是否开启休眠
     enableSleeping: boolean;
-    // 是否开启粗检查
-    enableBroadPhase: boolean;
     // 是否开启缓存
-    enbaleCache: boolean;
-    // 是否开启缓存移除
-    enableCacheRemove: boolean;
+    enableCache: boolean;
 
     // 重力
     gravity: Vector;
-    
-    // 判定休眠帧树阈值
-    sleepThreshold: number;
-    // 判定休眠动量阈值
-    sleepMotionThreshold: number;
-    // 判定唤醒动量阈值
-    wakeMotionThreshold: number;
-    // 缓存移除时间阈值
-    cacheRemoveThreshold: number;
-
-    // 允许穿透深度
-    slop: number;
-    // 位置修正因子
-    correctionFactor: number;
-    // 碰撞求解迭代次数
-    collisionIterations: number;
-    // 约束求解迭代次数
-    constraintIterations: number;
 
     // 方法
     methods: {
@@ -77,6 +55,10 @@ export interface EngineOpt {
 
 // 主引擎
 export class Engine {
+
+    testFlag: boolean = false;
+    timeList: number[] = [];
+
     // 模拟窗口宽度
     width: number;
     // 模拟窗口高度
@@ -100,8 +82,8 @@ export class Engine {
     detector: Detector;
     // 流形表
     manifoldTable: ManifoldTable;
-    // 约束求解器
-    resolver: Resolver;
+    // 接触约束
+    contactConstraint: ContactConstraint;
     // 休眠管理器
     sleeping: Sleeping;
     // 方法
@@ -149,7 +131,7 @@ export class Engine {
         this.timeStepper = new TimeStepper(this, opt);
         this.detector = new Detector(this, opt);
         this.manifoldTable = new ManifoldTable(opt);
-        this.resolver = new Resolver(this, opt);
+        this.contactConstraint = new ContactConstraint();
         this.sleeping = new Sleeping(opt);
     }
 
@@ -178,17 +160,38 @@ export class Engine {
         }
 
         // 解决所有约束
-        this.resolver.solveConstraint();
+        // this.resolver.solveConstraint();
 
         // 是否开启碰撞检测
         if(this.enableCollisionDetection) {
             
             // 粗阶段检测
             broadPhasePair = this.detector.broadPhase.detect(this.bodies);
+
+            let start = performance.now();
+
             // 细阶段检测
             collisions = this.detector.narrowPhase.detect(broadPhasePair);
 
-            // console.log(collisions);
+            let end = performance.now(),
+                range = 360;
+
+            if(this.testFlag) {
+                if(this.timeList.length < range) {
+                    this.timeList.push(end - start);
+                }
+                else {
+                    let total = this.timeList.reduce((t, cur) => {
+                        return t + cur;
+                    });
+    
+                    console.log(total / range);
+                    this.testFlag = false;
+                    this.timeList.length = 0;
+                }
+            }
+
+            //console.log(collisions);
             
             this.manifoldTable.update(collisions, timeStamp);
             // 移除缓存表超时的碰撞对
@@ -201,7 +204,7 @@ export class Engine {
                    this.sleeping.afterCollision(this.manifoldTable.list);
 
                 // 求解碰撞约束
-                this.resolver.solveCollision(this.manifoldTable.list, dt);
+                this.contactConstraint.solve(this.manifoldTable.list, dt);
             }
         }
 
@@ -242,7 +245,9 @@ export class Engine {
     setOption(opt: EngineOpt) {
         Util.merge(this, opt);
         Util.merge(this.timeStepper, opt);
-        Util.merge(this.manifoldTable, opt);
-        Util.merge(this.resolver, opt);
+    }
+
+    test() {
+        this.testFlag = true;
     }
 }

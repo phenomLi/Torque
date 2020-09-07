@@ -1,10 +1,12 @@
 import { Vector, _tempVector1 } from "../math/vector";
-import { Poly, VertexList, Vertices } from "../common/vertices";
+import { Poly, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
-import { Collision, Contact, Geometry } from "./manifold";
-import { VClip, edge } from "./vClip";
+import { Collision, Geometry } from "./manifold";
 import { VClosest } from "./vClosest";
-
+import { Contact } from "../constraint/contact";
+import { EngineOpt } from "../core/engine";
+import { Util } from "../common/util";
+import { axesFilter_closestVertices } from "./axesFilter_closestVertices";
 
 
 /**
@@ -13,11 +15,18 @@ import { VClosest } from "./vClosest";
  */
 
 export class SAT {
+    private enableAxesFilter: boolean = true;
+    private axesFilterThreshold: number = 8;
+
+    constructor(opt: EngineOpt) {
+        Util.merge(this, opt);
+    }
 
     /**
      * 多边形 - 多边形或圆形（geometry）
      * @param poly
      * @param geometry 
+     * @param intersection
      * @param prevCollision
      */
     polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
@@ -74,7 +83,7 @@ export class SAT {
      * @param prevCollision
      */
     circleCollideCircle(arcA: Arc, arcB: Arc, prevCollision: Collision): Collision {
-        let axis: Vector = arcA.center.sub(arcB.center, _tempVector1),
+        let axis: Vector = arcA.centroid.sub(arcB.centroid, _tempVector1),
             overlaps: number = (arcA.radius + arcB.radius) - axis.len(),
             collision: Collision = new Collision();
 
@@ -95,9 +104,9 @@ export class SAT {
         collision.normal.y = normal.y;
         collision.tangent = normal.nor().nol();
 
-        arcA.center.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2, _tempVector1)
+        let position = arcA.centroid.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2);
 
-        collision.contacts = [new Contact(_tempVector1, overlaps)];
+        collision.contacts = [new Contact(position, overlaps)];
         collision.collide = true;
 
         return collision;
@@ -151,8 +160,9 @@ export class SAT {
      * @param geometry 
      */
     private filterAxes(poly: Poly, geometry: Geometry): Vector[] {
-        let axes: Vector[] = [];
-        
+        let axes: Vector[] = [],
+            circleAxis: Vector;
+
         // 若geometry是多边形
         if(geometry instanceof Poly) {
             axes.push(...poly.axes);
@@ -160,8 +170,21 @@ export class SAT {
         }
         // 是圆形
         else {
-            axes.push(Arcs.getAxes(<Arc>geometry, poly), ...poly.axes);
+            circleAxis = Arcs.getAxes(<Arc>geometry, poly);
+            axes.push(circleAxis, ...poly.axes);
         }
+
+        // 如果开启了轴过滤功能并且两个图形得轴的数量大于给定的阈值，进行轴过滤
+        if(this.enableAxesFilter && axes.length >= this.axesFilterThreshold) {
+            axes = axesFilter_closestVertices(poly, geometry);
+            // axes = axesFilter_intersection(poly, geometry, intersection);
+
+            if(circleAxis) {
+                axes.push(circleAxis);
+            }
+        }
+
+        // console.log(axes);
 
         return Vertices.uniqueAxes(axes);
     }
@@ -174,7 +197,7 @@ export class SAT {
      * @param bodyB 刚体B
      */
     private reviseNormal(normal: Vector, geometryA: Geometry, geometryB: Geometry): Vector {
-        if (normal.dot(geometryB.center.sub(geometryA.center, _tempVector1)) > 0) {
+        if (normal.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
             return normal.inv();
         } 
 
@@ -219,7 +242,7 @@ export class SAT {
                 motion = Math.sqrt(bodyA.motion + bodyB.motion);
 
             // 若上次碰撞判定为真，且当前碰撞对刚体趋于静止，可复用
-            return prevCollision.collide && motion < 0.1;
+            return prevCollision.collide && motion < 0.05;
         }
         
         // 碰撞缓存不存在，直接判定无法复用
@@ -236,10 +259,10 @@ export class SAT {
     private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
         if(geometry instanceof Poly) {
             return VClosest(poly, geometry, normal, depth);
-            // return VClip(poly, geometry, normal, depth);
+            //return VClip(poly, geometry, normal, depth);
         }
         else {
-            let vertex = (<Arc>geometry).center.loc(normal, (<Arc>geometry).radius - depth / 2);
+            let vertex = (<Arc>geometry).centroid.loc(normal, (<Arc>geometry).radius - depth / 2);
             return [new Contact(vertex, depth)];
         }
     }
