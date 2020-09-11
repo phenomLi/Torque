@@ -6,6 +6,7 @@ import { Engine, EngineOpt } from "../core/engine";
 import { Collision, Geometry } from "./manifold";
 import { Util } from "../common/util";
 import { ManifoldTable } from "./manifoldTable";
+import { Bound } from "./bound";
 
 
 
@@ -52,9 +53,9 @@ export class NarrowPhase {
                     // 两个子图形包围盒不相交，跳过
                     let axesA = partA instanceof Poly? partA.axes: [],
                         axesB = partB instanceof Poly? partB.axes: [],
-                        intersection = partA.bound.isIntersect(partB.bound);
+                        intersection: Bound = partA.bound.intersect(partB.bound);
 
-                    if(!intersection) continue;
+                    if(intersection === null) continue;
 
                     prevCollision = this.getPrevCollision(partA, partB, this.engine.manifoldTable);
 
@@ -64,15 +65,15 @@ export class NarrowPhase {
                     }
                     // A为多边形，B为圆形
                     else if(partA instanceof Poly && partB instanceof Arc) {
-                        collisions.push(this.SAT.polygonCollideBody(partA, partB, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(partA, partB, intersection, prevCollision));
                     }
                     // A为圆形，B为多边形
                     else if(partA instanceof Arc && partB instanceof Poly) {
-                        collisions.push(this.SAT.polygonCollideBody(partB, partA, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(partB, partA, intersection, prevCollision));
                     }
                     // A,B皆为多边形
                     else {
-                        collisions.push(this.SAT.polygonCollideBody(<Poly>partA, <Poly>partB, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(<Poly>partA, <Poly>partB, intersection, prevCollision));
                     }
                 }
             }

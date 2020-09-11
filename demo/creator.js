@@ -5,6 +5,12 @@ class Creator {
     constructor(container, width, height, opt) {
         this.zr = zrender.init(container),
         this.t = new Torque(width, height, opt || {});
+        this.style = (opt) => ({
+            fill: null,
+            stroke: opt.stroke,
+            transformText: true,
+            textFill: opt.textFill
+        });
     }
 
     circle(x, y, r, opt) {
@@ -18,11 +24,8 @@ class Creator {
                     r: r
                 },
                 style: {
-                    fill: opt.fill,
-                    stroke: opt.stroke,
+                    ...this.style(opt),
                     text: circle.id,
-                    transformText: true,
-                    textFill: opt.textFill
                 }
             });
 
@@ -52,11 +55,8 @@ class Creator {
                     height: h
                 },
                 style: {
-                    fill: opt.fill,
-                    stroke: opt.stroke,
-                    text: rect.id,
-                    transformText: true,
-                    textFill: opt.textFill
+                    ...this.style(opt),
+                    text: rect.id
                 }
             });
 
@@ -81,11 +81,11 @@ class Creator {
         let PI = Math.PI,
             dStep = 2 * PI / n,
             deg = -PI / 2,
-            localV = [[x + r * Math.cos(deg), y + r * Math.sin(deg)]];
+            localV = [[r * Math.cos(deg), r * Math.sin(deg)]];
 
         for (let i = 0, end = n - 1; i < end; i++) {
             deg += dStep;
-            localV.push([x + r * Math.cos(deg), y + r * Math.sin(deg)]);
+            localV.push([r * Math.cos(deg), r * Math.sin(deg)]);
         }
 
         let isogon = Torque.body.Polygon(x, y, localV, opt),
@@ -100,11 +100,8 @@ class Creator {
                     r
                 },
                 style: {
-                    fill: opt.fill,
-                    stroke: opt.stroke,
-                    text: isogon.id,
-                    transformText: true,
-                    textFill: opt.textFill
+                    ...this.style(opt),
+                    text: isogon.id
                 }
             });
 
@@ -133,11 +130,8 @@ class Creator {
                     points
                 },
                 style: {
-                    fill: opt.fill,
-                    stroke: opt.stroke,
-                    text: poly.id,
-                    transformText: true,
-                    textFill: opt.textFill
+                    ...this.style(opt),
+                    text: poly.id
                 }
             });
 

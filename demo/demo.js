@@ -5,10 +5,10 @@ const canvas = document.getElementById('canvas'),
 
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
-    gravity: Creator.v(0, 9),
-    enableSleeping: true,
-    enableCache: true,
-    enableAxesFilter: true
+    gravity: Creator.v(0, 10),
+    enableSleeping: false,
+    enableCache: false,
+    enableSATBoost: true
 });
 
 
@@ -48,8 +48,13 @@ function createWall(cWidth, cHeight, wallWidth, opt) {
 function createStack(row, col, x, w) {
     for(let i = 0; i < row; i++) {
         for(let j = 0; j < col; j++) {
-            creator.rect(x + j * w, canvasHeight - 30 - w * (i + 1), w, w, {
-                fill: '#f38181',
+            // creator.rect(x + j * w, canvasHeight - 30 - w * (i + 1), w, w, {
+            //     fill: '#f38181',
+            //     ...options
+            // });
+
+            creator.isogon(x + j * w * 2, canvasHeight - 30 - w * 2 * (i + 1), w, 16, {
+                fill: '#778beb',
                 ...options
             });
         }
@@ -68,47 +73,58 @@ createWall(canvasWidth, canvasHeight, 30, {
 
 
 const options = {
-    mass: 10,
+    mass: 100,
     friction: 0.3,
-    // textFill: '#000',
+    // textFill: null,
     stroke: '#333',
     methods: {
-        // sleepStart(body) {
-        //     body.data.attr('style', {
-        //         opacity: 0.5
-        //     });
-        // },
-        // sleepEnd(body) {
-        //     body.data.attr('style', {
-        //         opacity: 1
-        //     });
-        // }
+        sleepStart(body) {
+            body.data.attr('style', {
+                opacity: 0.5
+            });
+        },
+        sleepEnd(body) {
+            body.data.attr('style', {
+                opacity: 1
+            });
+        }
     }
 };
 
-// createStack(5, 5, 300, 50);
+createStack(7, 17, 100, 40);
 
 
-creator.polygon(600, 450, [[0, 0], [50, 0], [100, 50], [100, 100], [0, 100]], {
-    fill: '#778beb',
-    ...options
-});
+// creator.polygon(600, 450, [[0, 0], [50, 0], [100, 50], [100, 100], [0, 100]], {
+//     fill: '#778beb',
+//     ...options
+// });
 
 
-creator.polygon(300, 450, [[0, 0], [50, 50], [100, 0], [100, 100], [0, 100]], {
-    fill: '#778beb',
-    ...options
-});
+// creator.polygon(300, 450, [[0, 0], [50, 50], [100, 0], [100, 100], [0, 100]], {
+//     fill: '#778beb',
+//     ...options
+// });
 
 
+// for(let i = 0; i < 50; i++) {
+//     creator.isogon(400, 200, 40, 4 + Math.floor((Math.random() * 16)), {
+//         fill: '#778beb',
+//         ...options
+//     });
+// }
 
-for(let i = 0; i < 30; i++) {
-    creator.isogon(200, 200, 50, 4 + Math.floor((Math.random() * 16)), {
-        fill: '#778beb',
-        ...options
-    });
-}
 
+// creator.rect(380, 580, 50, 50, {
+//     fill: '#778beb',
+//     rotation: Math.PI * 0.25,
+//     ...options
+// });
+
+
+// creator.rect(350, 550, 50, 50, {
+//     fill: '#778beb',
+//     ...options
+// });
 
 
 
@@ -117,13 +133,18 @@ for(let i = 0; i < 30; i++) {
 canvas.addEventListener('click', e => {
     let x = e.offsetX, y = e.offsetY;
 
-    creator.rect(x, y, getRandom(100, 40), getRandom(100, 20), {
+    creator.rect(x, y, getRandom(50, 10), getRandom(50, 10), {
         fill: '#f38181',
         ...options
     });
 
-    creator.circle(x, y, getRandom(50, 10), {
+    creator.circle(x, y, getRandom(30, 10), {
         fill: '#fce38a',
+        ...options
+    });
+
+    creator.isogon(x, y, 30, getRandom(16, 4), {
+        fill: '#778beb',
         ...options
     });
 });

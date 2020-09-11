@@ -71,19 +71,22 @@ export class BroadPhase {
         
         // 包围盒在x轴上排序 （直接插入排序）
         // 第一次排序时包围盒趋向于无序，这时复杂度为O(n^2) 
-        // 而因为时间相干性，在之后的每帧包围盒趋向有序，此时直接插入排序效率最高，为O(n^2)
+        // 而因为时间相干性，在之后的每帧包围盒趋向有序，此时直接插入排序效率最高，为O(nlogn)
         Util.insertSort<Body>(bodies, (bodyA, bodyB) => bodyA.bound.min.x - bodyB.bound.min.x);
     
         for(i = 0; i < len; i++) {
             for(j = i + 1; j < len; j++) {
+                let boundA = bodies[i].bound,
+                    boundB = bodies[j].bound;
+
                 // 已经不可能发生碰撞了，跳出循环
-                if(bodies[i].bound.max.x < bodies[j].bound.min.x) break;
+                if(boundA.max.x < boundB.min.x) break;
 
                 // 若A，B不可以发生碰撞，返回
                 if(!this.canCollide(bodies[i], bodies[j])) continue;
 
                 // 一个个对比包围盒是否相交
-                if(bodies[i].bound.isIntersect(bodies[j].bound)) {
+                if(boundA.min.y < boundB.max.y && boundB.min.y < boundA.max.y) {
                     broadPhasePairList.push({
                         bodyA: bodies[i],
                         bodyB: bodies[j],

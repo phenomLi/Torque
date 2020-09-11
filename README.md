@@ -1,6 +1,6 @@
 # Torque
 
-一个 2D 刚体物理引擎，不包含渲染。
+ 2D 刚体高性能物理引擎，不包含渲染。
 
 ![](https://github.com/phenomLi/Torque/raw/master/images/GIF.gif)
 
@@ -58,7 +58,7 @@ zr.add(rectShape);
 - 固定的刚体
 - 摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
-- 经过轴过滤优化的 SAT
+- **SATBoost技术**
 - 复合刚体（TODO） 
 - 弹簧约束（TODO）
 

@@ -399,7 +399,7 @@ export const Vertices = {
      * @param axis 投影轴
      */
     projection(vertexList: VertexList, axis: Vector): {min: number, max: number} {
-        let projectionRange = vertexList.map(v => v.pro(axis));
+        let projectionRange = vertexList.map(v => v.dot(axis));
 
         return {
             min: Math.min.apply(Math, projectionRange),

@@ -186,7 +186,8 @@ export class ContactConstraint {
 
                 // sequential impulse方法，收敛法向冲量
                 let oldNormalImpulse = contact.normalImpulse;
-                contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
+                contact.normalImpulse += normalImpulse;
+                contact.normalImpulse = Math.max(contact.normalImpulse, 0);
                 normalImpulse = contact.normalImpulse - oldNormalImpulse;
 
                 // 应用冲量

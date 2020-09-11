@@ -1,6 +1,5 @@
-import { VertexList, Poly, Vertices } from "../common/vertices";
-import { Vector } from "../math/vector";
-import { Geometry } from "./manifold";
+import { VertexList, Vertices } from "../common/vertices";
+import { Vector, _tempVector3 } from "../math/vector";
 import { Contact } from "../constraint/contact";
 
 
@@ -9,8 +8,21 @@ import { Contact } from "../constraint/contact";
  * @param vertexList 
  * @param normal 
  */
-function orderProjectionVertexInNormalDirection(vertexList: VertexList, normal: Vector): Vector[] {
-    return vertexList.slice(0).sort((vertexA, vertexB) => vertexA.dot(normal) - vertexB.dot(normal));
+function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number {
+    let projection: number,
+        minProjection: number = Infinity,
+        index: number;
+
+    for(let i = 0; i < vertexList.length; i++) {
+        projection = vertexList[i].dot(normal);
+
+        if(projection < minProjection) {
+            minProjection = projection;
+            index = i;
+        }
+    }
+
+    return index;
 }
 
 
@@ -20,47 +32,54 @@ function orderProjectionVertexInNormalDirection(vertexList: VertexList, normal: 
  * @param poly 
  * @param geometry 
  */
-export function VClosest(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
-    let potentialContactsA: Vector[] = [],
-        potentialContactsB: Vector[] = [],
-        contacts: Contact[] = [],
-        normalInv = normal.inv(),
+export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Vector, depth: number): Contact[] {
+    let contacts: Contact[] = [],
+        normalInv = normal.inv(_tempVector3),
+        index: number, prev: number, next: number,
+        testVertices: Vector[] = [],
         i;
 
-    let vertexListA = poly.vertexList,
-        vertexListB = (<Poly>geometry).vertexList;
-
     // 寻找多边形A最接近多边形B的两个点
-    potentialContactsA = orderProjectionVertexInNormalDirection(vertexListA, normal);
+    index = findClosestVertexIndex(vertexListA, normal);
+    prev = index > 0? index - 1: vertexListA.length - 1;
+    next = index < vertexListA.length - 1? index + 1: 0;
 
-    for(i = 0; i < potentialContactsA.length; i++) {
+    testVertices.push(vertexListA[prev]);
+    testVertices.push(vertexListA[index]);
+    testVertices.push(vertexListA[next]);
+
+    for(i = 0; i < testVertices.length; i++) {
         // 查看这些点是否在多边形B内部
-        if(Vertices.isContains(vertexListB, potentialContactsA[i])) {
+        if(Vertices.isContains(vertexListB, testVertices[i])) {
             // 如果是，则这个点记为一个碰撞点
-            contacts.push(new Contact(potentialContactsA[i], depth));
+            contacts.push(new Contact(testVertices[i], depth));
         } 
-        else {
-            if(i !== 0) break;
-        }
     }
 
-    if(contacts.length >= 2) return contacts;
+    if(contacts.length >= 2) {
+        return contacts;
+    };
+
+    testVertices.length = 0;
 
     // 同理上面
-    potentialContactsB = orderProjectionVertexInNormalDirection(vertexListB, normalInv);
+    index = findClosestVertexIndex(vertexListB, normalInv);
+    prev = index > 0? index - 1: vertexListB.length - 1;
+    next = index < vertexListB.length - 1? index + 1: 0;
 
-    for(i = 0; i < potentialContactsB.length; i++) {
-        if(Vertices.isContains(vertexListA, potentialContactsB[i])) {
-            contacts.push(new Contact(potentialContactsB[i], depth));
+    testVertices.push(vertexListB[prev]);
+    testVertices.push(vertexListB[index]);
+    testVertices.push(vertexListB[next]);
+
+    for(i = 0; i < testVertices.length; i++) {
+        if(Vertices.isContains(vertexListA, testVertices[i])) {
+            contacts.push(new Contact(testVertices[i], depth));
         }
-        else {
-            if(i !== 0) break;
-        } 
     }
 
     // 边界情况：即没有碰撞点的情况
     if(contacts.length < 1) {
-        contacts.push(new Contact(potentialContactsA[0], depth));
+        contacts.push(new Contact(vertexListB[index], depth));
     }
 
     return contacts;
