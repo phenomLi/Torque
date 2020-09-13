@@ -65,5 +65,10 @@ zr.add(rectShape);
 ## demo
 [戳这里](https://phenomli.github.io/Torque/)
 
+## 关于SATboost
+SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一个优化算法，能大幅提高碰撞检测的效率。在给定7 * 17个正16边形的静止碰撞（rest collision）条件下，与未经过优化的常规SAT对比结果如下（关闭碰撞复用和休眠功能）：
+![](https://github.com/phenomLi/Torque/raw/master/images/微信图片_20200913174835.png)
+![](https://github.com/phenomLi/Torque/raw/master/images/微信截图_20200913175522.png)
+
 ## A.D.
 想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
