@@ -1,5 +1,5 @@
 import { Vector, _tempVector1, _tempVector4 } from "../math/vector";
-import { Poly, Vertices } from "../common/vertices";
+import { Axis, Poly, VertexList, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
 import { Collision, Geometry } from "./manifold";
 import { VClosest } from "./vClosest";
@@ -7,7 +7,6 @@ import { Contact } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
-import { Bound } from "./bound";
 
 
 
@@ -32,40 +31,16 @@ export class SAT {
      * @param intersection
      * @param prevCollision
      */
-    polygonCollideBody(poly: Poly, geometry: Geometry, intersection: Bound, prevCollision: Collision): Collision {
+    polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
         let canReuse: boolean = this.canReuseCollision(poly, geometry, prevCollision),
             collision: Collision = null,
-            intersectionCenter: Vector = _tempVector4,
-            intersectionPartA: Vector[] = poly.vertexList, 
-            intersectionPartB: Vector[] | Arc = geometry instanceof Poly? geometry.vertexList: geometry,
             result = null,
-            axes: Vector[];
+            axes: Axis[];
 
-        // 使用加速算法简化图形
-        if(this.enableSATBoost) {
-            let widthA = poly.bound.max.x - poly.bound.min.x,
-                widthB = geometry.bound.max.x - poly.bound.min.x,
-                biggerBound = widthA > widthB? poly.bound: geometry.bound,
-                smallerBound = widthA > widthB? geometry.bound: poly.bound;
-
-            if(!biggerBound.isContains(smallerBound)) {
-                intersectionCenter.x = (intersection.min.x + intersection.max.x) / 2;
-                intersectionCenter.y = (intersection.min.y + intersection.max.y) / 2;
-
-                if(intersectionPartA.length >= this.polySimplificationThreshold) {
-                    intersectionPartA = this.findIntersectionPart(intersectionPartA, intersection, intersectionCenter);
-                }
-
-                if(Array.isArray(intersectionPartB) && intersectionPartB.length >= this.polySimplificationThreshold) {
-                    intersectionPartB = this.findIntersectionPart(intersectionPartB, intersection, intersectionCenter)
-                }
-            }
-        }
-        
         // 若能用缓存，使用缓存
         if(canReuse) {
             collision = prevCollision;
-            result = this.detect(intersectionPartA, intersectionPartB, [collision.normal]);
+            result = this.detect(poly, geometry, [collision.normal]);
 
             if(result.minOverlap < 0) {
                 collision.collide = false;
@@ -75,9 +50,8 @@ export class SAT {
         // 若不能用缓存，则进行完整的测试
         else {
             collision = new Collision();
-
             axes = this.getTestAxes(poly, geometry);
-            result = this.detect(intersectionPartA, intersectionPartB, axes);
+            result = this.detect(poly, geometry, axes);
 
             // 若发现两个刚体投影的重叠部分是负的，即表示它们没相交
             if(result.minOverlap < 0) {
@@ -87,9 +61,8 @@ export class SAT {
 
             let normal = this.reviseNormal(axes[result.index], poly, geometry);
 
-            collision.normal.x = normal.x;
-            collision.normal.y = normal.y;
-            collision.tangent = normal.nor();
+            collision.normal = normal;
+            collision.tangent = normal.value.nor();
 
             collision.partA = poly;
             collision.partB = geometry;
@@ -100,12 +73,7 @@ export class SAT {
         collision.collide = true;
 
         // 计算碰撞点
-        collision.contacts = this.findContacts(
-            intersectionPartA,
-            intersectionPartB,
-            collision.normal, 
-            result.minOverlap
-        );
+        collision.contacts = this.findContacts(poly, geometry, collision.normal, result.minOverlap);
 
         return collision;
     }
@@ -117,9 +85,16 @@ export class SAT {
      * @param prevCollision
      */
     circleCollideCircle(arcA: Arc, arcB: Arc, prevCollision: Collision): Collision {
-        let axis: Vector = arcA.centroid.sub(arcB.centroid, _tempVector1),
-            overlaps: number = (arcA.radius + arcB.radius) - axis.len(),
-            collision: Collision = new Collision();
+        let axis: Axis = {
+                value: arcA.centroid.sub(arcB.centroid, _tempVector1),
+                opposite: null,
+                origin: null,
+                supportVertexIndex: null,
+                oppositeVertexIndex: null
+            },
+            overlaps: number = (arcA.radius + arcB.radius) - axis.value.len(),
+            collision: Collision = new Collision(),
+            normal: Axis;
 
         // 两圆心距离比两圆半径和要大，即没有发生碰撞
         if(overlaps < 0) {
@@ -127,18 +102,18 @@ export class SAT {
             return collision;
         }
 
-        let normal = this.reviseNormal(axis, arcA, arcB).nol();
+        normal = this.reviseNormal(axis, arcA, arcB);
+        normal.value = normal.value.nol();
 
         collision.partA = arcA;
         collision.partB = arcB;
         collision.bodyA = arcA.body;
         collision.bodyB = arcB.body;
 
-        collision.normal.x = normal.x;
-        collision.normal.y = normal.y;
-        collision.tangent = normal.nor().nol();
+        collision.normal = normal;
+        collision.tangent = normal.value.nor();
 
-        let position = arcA.centroid.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2);
+        let position = arcA.centroid.loc(normal.value.inv(_tempVector1), arcA.radius - overlaps / 2);
 
         collision.contacts = [new Contact(position, overlaps)];
         collision.collide = true;
@@ -158,14 +133,16 @@ export class SAT {
      * @param intersectionPartB 
      * @param axes 
      */
-    private detect(intersectionPartA: Vector[], intersectionPartB: Vector[] | Arc, axes: Vector[]): { minOverlap: number, index: number } {
+    private detect(poly: Poly, geometry: Geometry, axes: Axis[]): { minOverlap: number, index: number } {
         let minOverlap = Infinity,
             overlaps, 
+            getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
+            // getOverlaps = this.getOverlaps,
             i, index;
 
         // 将两个刚体投影到所有轴上
         for(i = 0; i < axes.length; i++) {
-            overlaps = this.getOverlaps(intersectionPartA, intersectionPartB, axes[i]);
+            overlaps = getOverlaps(poly, geometry, axes[i]);
 
             if(overlaps < 0) {
                 return {
@@ -193,19 +170,13 @@ export class SAT {
      * @param geometry 
      * @param intersection
      */
-    private getTestAxes(poly: Poly, geometry: Geometry): Vector[] {
-        let axes: Vector[] = [],
-            circleAxis: Vector;
+    private getTestAxes(poly: Poly, geometry: Geometry): Axis[] {
+        let axes: Axis[],
+            circleAxis: Axis;
 
-        // 若geometry是多边形
-        if(geometry instanceof Poly) {
-            axes.push(...poly.axes);
-            axes.push(...geometry.axes);
-        }
-        // 是圆形
-        else {
+        // 若geometry是圆形，计算一条动态轴
+        if(geometry instanceof Arc) {
             circleAxis = Arcs.getAxes(<Arc>geometry, poly);
-            axes.push(circleAxis, ...poly.axes);
         }
 
         // 如果开启了加速功能，首先进行轴过滤
@@ -216,106 +187,136 @@ export class SAT {
                 axes.push(circleAxis);
             }
         }
+        else {
+            axes = [];
+
+            axes.push(...poly.axes);
+
+            if(circleAxis) {
+                axes.push(circleAxis);
+            }
+            else {
+                axes.push(...(<Poly>geometry).axes);
+            }
+        }
         
         return axes;
     }
 
     /**
-     * 求投影重叠
+     * 求投影重叠（常规方法）
      * @param poly 
      * @param geometry
      * @param axis 投影轴
      * @param intersection
      * @param intersectionCenter
      */
-    private getOverlaps(partA: Vector[], partB: Vector[] | Arc, axis: Vector): number {
-        let projection1,
+    private getOverlaps(poly: Poly, geometry: Geometry, axis: Axis): number {
+        let axisVector: Vector = axis.value,
+            partA = poly.vertexList,
+            partB = geometry instanceof Poly? geometry.vertexList: geometry,
+            projection1,
             projection2;
 
         // 若geometry是多边形
         if(Array.isArray(partB)) {
-            projection1 = Vertices.projection(partA, axis),
-            projection2 = Vertices.projection(partB, axis);
+            projection1 = Vertices.projection(partA, axisVector),
+            projection2 = Vertices.projection(partB, axisVector);
         }
         // 是圆形
         else { 
-            projection1 = Vertices.projection(partA, axis),
-            projection2 = Arcs.Projection(partB, axis);
+            projection1 = Vertices.projection(partA, axisVector),
+            projection2 = Arcs.projection(partB, axisVector);
         }
 
         return Math.min(projection1.max - projection2.min, projection2.max - projection1.min);
     }
 
     /**
-     * 寻找图形在包围盒交集中的最小部分
-     * @param vertexList 
-     * @param intersection 
-     * @param intersectionCenter 
+     * 求投影重叠（加速方法）
+     * @param poly 
+     * @param geometry 
+     * @param axis 
      */
-    private findIntersectionPart(vertexList: Vector[], intersection: Bound, intersectionCenter: Vector): Vector[] {
-        let length = vertexList.length,
-            index: number, 
-            prev: number, 
-            next: number,
-            distance: number,
-            minDistance: number = Infinity,
-            minDistanceIndex: number,
-            res: Vector[] = [];
-    
-        for(let i = 0; i < vertexList.length; i++) {
-            let vertex = vertexList[i];
-    
-            if(intersection.contains(vertex)) {
-                index = i;
-                break;
-            }
-    
-            distance = (vertex.x - intersectionCenter.x) ** 2 + (vertex.y - intersectionCenter.y) ** 2;
-    
-            if(distance < minDistance) {
-                minDistance = distance;
-                minDistanceIndex = i;
-            }
+    private getOverlaps_boost(poly: Poly, geometry: Geometry, axis: Axis): number {
+        let axisVector: Vector = axis.value,
+            opposite = axis.opposite;
+            
+        // 该轴是圆形和多边形的动态轴
+        if(opposite === null) {
+            let projection1 = Vertices.projection(poly.vertexList, axisVector),
+                projection2 = Arcs.projection(<Arc>geometry, axisVector);
+
+            return Math.min(projection1.max - projection2.min, projection2.max - projection1.min);
         }
-    
-        if(index === undefined) {
-            prev = minDistanceIndex > 0? minDistanceIndex - 1: length - 1;
-            next = minDistanceIndex < length - 1? minDistanceIndex + 1: 0;
-    
-            res.push(vertexList[prev]);
-            res.push(vertexList[minDistanceIndex]);
-            res.push(vertexList[next]);
-    
-            return res;
+
+        let supportVertex = axis.origin[axis.supportVertexIndex],
+            supportProjection: number = supportVertex.dot(axisVector);
+
+        // 对面是圆形
+        if(opposite instanceof Arc) {
+            let circleProjection = Arcs.projection(opposite, axisVector);
+            return supportProjection - circleProjection.min;
         }
-    
-        res.push(vertexList[index]);
-        prev = next = index;
-    
+        
+        let oppositeIndex = axis.oppositeVertexIndex,
+            maxOverlap: number = -Infinity,
+            prev: number, next: number, 
+            seekPrev: boolean = true,
+            seekNext: boolean = true,
+            lastPrevPro: number,
+            lastNextPro: number,
+            projection: number,
+            overlap: number;
+
+        prev = next = oppositeIndex;
+        projection = opposite[oppositeIndex].dot(axisVector);
+        lastPrevPro = lastNextPro = projection;
+        overlap = supportProjection - projection; 
+        maxOverlap = overlap;
+        
         do {
-            prev = prev > 0? prev - 1: length - 1;
-            res.unshift(vertexList[prev]);
-    
-            if(!intersection.contains(vertexList[prev])) {
+            if(!seekPrev && !seekNext) {
                 break;
+            } 
+
+            if(seekPrev) {
+                prev = prev > 0? prev - 1: opposite.length - 1;
+                projection = opposite[prev].dot(axisVector);
+                overlap = supportProjection - projection;
+
+                if(projection > lastPrevPro) {
+                    seekPrev = false;
+                }
+                else {
+                    if(overlap > maxOverlap) {
+                        maxOverlap = overlap;
+                    }
+    
+                    lastPrevPro = projection;
+                }
             }
-        } while(prev !== index);
+
+            if(seekNext) {
+                next = next < opposite.length - 1? next + 1: 0;
+                projection = opposite[next].dot(axisVector);
+                overlap = supportProjection - projection;
+
+                if(projection > lastNextPro) {
+                    seekNext = false;
+                }
+                else {
+                    if(overlap > maxOverlap) {
+                        maxOverlap = overlap;
+                    }
     
-        do {
-            next = next < length - 1? next + 1: 0;
-    
-            if(next === prev) {
-                break;
+                    lastNextPro = projection;
+                }
             }
-    
-            res.push(vertexList[next]);
-    
-            if(!intersection.contains(vertexList[next])) {
-                break;
-            }
-        } while(next !== index);
-    
-        return res;
+
+        } while(prev !== next);
+
+        return maxOverlap;
     }
 
     /**
@@ -324,12 +325,15 @@ export class SAT {
      * @param bodyA 刚体A
      * @param bodyB 刚体B
      */
-    private reviseNormal(normal: Vector, geometryA: Geometry, geometryB: Geometry): Vector {
-        if (normal.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
-            return normal.inv();
+    private reviseNormal(normal: Axis, geometryA: Geometry, geometryB: Geometry): Axis {
+        if (normal.value.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
+            return {
+                ...normal,
+                value: normal.value.inv(),
+            };
         } 
 
-        return normal.col();
+        return normal;
     }
 
     /**
@@ -360,13 +364,13 @@ export class SAT {
      * @param normal 
      * @param depth 
      */
-    private findContacts(intersectionPartA: Vector[], intersectionPartB: Vector[] | Arc, normal: Vector, depth: number): Contact[] {
-        if(Array.isArray(intersectionPartB)) {
-            return VClosest(intersectionPartA, intersectionPartB, normal, depth);
+    private findContacts(poly: Poly, geometry: Geometry, normal: Axis, depth: number): Contact[] {
+        if(geometry instanceof Poly) {
+            return VClosest(poly.vertexList, geometry.vertexList, normal, depth);
             //return VClip(poly, geometry, normal, depth);
         }
         else {
-            let vertex = (<Arc>intersectionPartB).centroid.loc(normal, (<Arc>intersectionPartB).radius - depth / 2);
+            let vertex = geometry.centroid.loc(normal.value, geometry.radius - depth / 2);
             return [new Contact(vertex, depth)];
         }
     }

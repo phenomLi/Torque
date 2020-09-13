@@ -49,16 +49,16 @@ zr.add(rectShape);
 
 
 ## feature
+- **SATBoost技术**
 - 休眠/唤醒技术
 - Sequential Impulses
-- 碰撞缓存
+- 碰撞缓存/复用技术
 - 碰撞过滤
 - 动态 dt
 - 凹多边形
 - 固定的刚体
 - 摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
-- **SATBoost技术**
 - 复合刚体（TODO） 
 - 弹簧约束（TODO）
 

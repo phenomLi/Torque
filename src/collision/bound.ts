@@ -68,19 +68,16 @@ export class Bound {
             overlapsX,
             overlapsY;
 
-        if(this.min.x < b.max.x && this.max.x > b.min.x) {
-            x = Math.max(this.min.x, b.min.x);
-            maxX = Math.min(this.max.x, b.max.x);
-            overlapsX = maxX - x;
-        }
+        x = Math.max(this.min.x, b.min.x);
+        maxX = Math.min(this.max.x, b.max.x);
         
-        if(this.min.y < b.max.y && this.max.y > b.min.y) {
-            y = Math.max(this.min.y, b.min.y);
-            maxY = Math.min(this.max.y, b.max.y);
-            overlapsY = maxY - y;
-        }
+        y = Math.max(this.min.y, b.min.y);
+        maxY = Math.min(this.max.y, b.max.y);
+
+        overlapsX = maxX - x;
+        overlapsY = maxY - y;
             
-        if(!overlapsX || !overlapsY) return null;
+        if(overlapsX < 0 || overlapsY < 0) return null;
 
         _tempVector1.x = x;
         _tempVector1.y = y;
@@ -111,7 +108,7 @@ export class Bound {
      * 判断与另一个包围盒是否相交
      * @param bound 
      */
-    isIntersect(bound: Bound): Boolean {
+    isIntersect(bound: Bound): boolean {
         return (this.min.x < bound.max.x && this.max.x > bound.min.x) && (this.min.y < bound.max.y && bound.min.y < this.max.y);
     }
 

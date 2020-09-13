@@ -6,8 +6,8 @@ const canvas = document.getElementById('canvas'),
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
     gravity: Creator.v(0, 10),
-    enableSleeping: false,
-    enableCache: false,
+    enableSleeping: true,
+    enableCache: true,
     enableSATBoost: true
 });
 
@@ -48,18 +48,14 @@ function createWall(cWidth, cHeight, wallWidth, opt) {
 function createStack(row, col, x, w) {
     for(let i = 0; i < row; i++) {
         for(let j = 0; j < col; j++) {
-            // creator.rect(x + j * w, canvasHeight - 30 - w * (i + 1), w, w, {
-            //     fill: '#f38181',
-            //     ...options
-            // });
-
-            creator.isogon(x + j * w * 2, canvasHeight - 30 - w * 2 * (i + 1), w, 16, {
-                fill: '#778beb',
+            creator.rect(x + j * w, canvasHeight - 30 - w * (i + 1), w, w, {
+                fill: '#f38181',
                 ...options
             });
         }
     }
 }
+
 
 
 createWall(canvasWidth, canvasHeight, 30, {
@@ -68,8 +64,6 @@ createWall(canvasWidth, canvasHeight, 30, {
     fill: null,
     stroke: '#333'
 });
-
-
 
 
 const options = {
@@ -91,42 +85,7 @@ const options = {
     }
 };
 
-createStack(7, 17, 100, 40);
-
-
-// creator.polygon(600, 450, [[0, 0], [50, 0], [100, 50], [100, 100], [0, 100]], {
-//     fill: '#778beb',
-//     ...options
-// });
-
-
-// creator.polygon(300, 450, [[0, 0], [50, 50], [100, 0], [100, 100], [0, 100]], {
-//     fill: '#778beb',
-//     ...options
-// });
-
-
-// for(let i = 0; i < 50; i++) {
-//     creator.isogon(400, 200, 40, 4 + Math.floor((Math.random() * 16)), {
-//         fill: '#778beb',
-//         ...options
-//     });
-// }
-
-
-// creator.rect(380, 580, 50, 50, {
-//     fill: '#778beb',
-//     rotation: Math.PI * 0.25,
-//     ...options
-// });
-
-
-// creator.rect(350, 550, 50, 50, {
-//     fill: '#778beb',
-//     ...options
-// });
-
-
+createStack(15, 8, 100, 30);
 
 
 
@@ -143,7 +102,7 @@ canvas.addEventListener('click', e => {
         ...options
     });
 
-    creator.isogon(x, y, 30, getRandom(16, 4), {
+    creator.isogon(x, y, getRandom(60, 30), getRandom(10, 4), {
         fill: '#778beb',
         ...options
     });

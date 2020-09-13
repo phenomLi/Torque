@@ -1,6 +1,6 @@
 import { Vector } from "../math/vector";
 import { Circle } from "../body/circle";
-import { Poly, Vertices } from "./vertices";
+import { Axis, Poly, Vertices } from "./vertices";
 import { Bound } from "../collision/bound";
 
 
@@ -11,7 +11,7 @@ export class Arc {
     centroid: Vector;
     radius: number;
     body: Circle;
-    bound: Bound
+    bound: Bound;
 
     constructor(body: Circle, centroid: Vector, radius: number) {
         this.id = body.id;
@@ -47,9 +47,15 @@ export const Arcs = {
      * 获取圆形和顶点集间的轴
      * @param vertices 顶点信息
      */
-    getAxes(circle: Arc, poly: Poly): Vector {
+    getAxes(circle: Arc, poly: Poly): Axis {
         let closestVertex = Vertices.getClosestVertex(circle.centroid, poly.vertexList);
-        return closestVertex.sub(circle.centroid).nol();
+        return {
+            value: closestVertex.sub(circle.centroid).nol(),
+            opposite: null,
+            origin: null,
+            supportVertexIndex: null,
+            oppositeVertexIndex: null
+        };
     },
 
     getBound(centroid: Vector, radius: number): Bound {
@@ -63,7 +69,7 @@ export const Arcs = {
      * 获取圆形在给定轴上的投影
      * @param axis 
      */
-    Projection(circle: Arc, axis: Vector): {min: number, max: number} {
+    projection(circle: Arc, axis: Vector): {min: number, max: number} {
         let len = circle.centroid.pro(axis);
 
         return {

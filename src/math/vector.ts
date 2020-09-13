@@ -96,8 +96,8 @@ export class Vector {
     nor(out?: Vector): Vector {
         out = out || new Vector();
         
-        out.x = -this.y;
-        out.y = this.x;
+        out.x = this.y;
+        out.y = -this.x;
 
         return out;
     }

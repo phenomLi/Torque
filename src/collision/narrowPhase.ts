@@ -53,9 +53,9 @@ export class NarrowPhase {
                     // 两个子图形包围盒不相交，跳过
                     let axesA = partA instanceof Poly? partA.axes: [],
                         axesB = partB instanceof Poly? partB.axes: [],
-                        intersection: Bound = partA.bound.intersect(partB.bound);
+                        intersection: boolean = partA.bound.isIntersect(partB.bound);
 
-                    if(intersection === null) continue;
+                    if(!intersection) continue;
 
                     prevCollision = this.getPrevCollision(partA, partB, this.engine.manifoldTable);
 
@@ -65,15 +65,15 @@ export class NarrowPhase {
                     }
                     // A为多边形，B为圆形
                     else if(partA instanceof Poly && partB instanceof Arc) {
-                        collisions.push(this.SAT.polygonCollideBody(partA, partB, intersection, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(partA, partB, prevCollision));
                     }
                     // A为圆形，B为多边形
                     else if(partA instanceof Arc && partB instanceof Poly) {
-                        collisions.push(this.SAT.polygonCollideBody(partB, partA, intersection, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(partB, partA, prevCollision));
                     }
                     // A,B皆为多边形
                     else {
-                        collisions.push(this.SAT.polygonCollideBody(<Poly>partA, <Poly>partB, intersection, prevCollision));
+                        collisions.push(this.SAT.polygonCollideBody(<Poly>partA, <Poly>partB, prevCollision));
                     }
                 }
             }

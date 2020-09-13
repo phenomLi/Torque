@@ -174,7 +174,7 @@ export class Engine {
             collisions = this.detector.narrowPhase.detect(broadPhasePair);
 
             let end = performance.now(),
-                range = 360;
+                range = 60;
 
             if(this.testFlag) {
                 if(this.timeList.length < range) {

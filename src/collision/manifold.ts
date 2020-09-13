@@ -1,7 +1,7 @@
 import { Body } from "../body/body";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
-import { Poly } from "../common/vertices";
+import { Axis, Poly, VertexList } from "../common/vertices";
 import { Arc } from "../common/arcs";
 import { Contact } from "../constraint/contact";
 
@@ -27,9 +27,9 @@ export class Collision {
     // 碰撞子图形B
     partB: Geometry;
     // 碰撞法线
-    normal: Vector = new Vector();
+    normal: Axis;
     // 碰撞切线
-    tangent: Vector = new Vector();
+    tangent: Vector;
     // 接触点
     contacts: Contact[];
     // 是否发生了碰撞

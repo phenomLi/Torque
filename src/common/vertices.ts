@@ -2,17 +2,27 @@ import { Vector } from "../math/vector";
 import { Bound } from "../collision/bound";
 import { Body } from "../body/body";
 import { Util } from "./util";
+import { Geometry } from "../collision/manifold";
+import { Arc } from "./arcs";
 
 
 // 顶点列表类型
 export type VertexList = Array<Vector>;
+// 边法向量（轴）类型
+export type Axis = {
+    value: Vector;
+    supportVertexIndex: number;
+    oppositeVertexIndex: number;
+    opposite: VertexList | Arc;
+    origin: VertexList;
+};
 
 
 // 一个顶点信息包
 export class Poly {
     id: number;
     vertexList: VertexList;
-    axes: Vector[];
+    axes: Axis[];
     body: Body;
     bound: Bound;
     isConcave: boolean;
@@ -122,16 +132,22 @@ export const Vertices = {
      * 求顶点围成的所有面的轴
      * @param vertexList 
      */
-    getAxes(vertexList: VertexList): Vector[] {
+    getAxes(vertexList: VertexList): Axis[] {
         let v = vertexList,
-            axis: Vector, axes: Vector[] = [],
+            axis: Vector, axes: Axis[] = [],
             i, j;
 
             for(i = 0; i < v.length; i++) {
                 j = (i + 1) % v.length;
 
                 axis = v[j].sub(v[i]).nor().nol();
-                axes.push(axis);
+                axes.push({
+                    value: axis,
+                    opposite: null,
+                    origin: vertexList,
+                    supportVertexIndex: null,
+                    oppositeVertexIndex: null
+                });
             }
 
         return axes;
@@ -165,14 +181,14 @@ export const Vertices = {
      * 使用斜率筛去共线的轴
      * @param axes 要筛选的轴
      */
-    uniqueAxes(axes: Vector[]): Vector[] {
+    uniqueAxes(axes: Axis[]): Axis[] {
         let axisVector: Vector,
-            tmpAxes: Vector[] = [],
+            tmpAxes: Axis[] = [],
             axesTable = {},
             i, gradient;
 
         for (i = 0; i < axes.length; i++) {
-            axisVector = axes[i];
+            axisVector = axes[i].value;
             gradient = (axisVector.y === 0) ? Infinity : (axisVector.x / axisVector.y);
             
             // 限制精度
@@ -206,7 +222,7 @@ export const Vertices = {
 
         // 转动轴
         for(i = 0; i < axes.length; i++) {
-            axes[i].rot(radian, null, axes[i]);
+            axes[i].value.rot(radian, null, axes[i].value);
         }
         
         // 更新几何中心
@@ -250,8 +266,8 @@ export const Vertices = {
             vertexListA: Vector[], 
             vertexListB: Vector[],
             axes = poly.axes.slice(0),
-            axesA: Vector[], 
-            axesB: Vector[],
+            axesA: Axis[], 
+            axesB: Axis[],
             xAxis: Vector,
             vTest: Vector,
             vDiv: Vector,
@@ -399,11 +415,25 @@ export const Vertices = {
      * @param axis 投影轴
      */
     projection(vertexList: VertexList, axis: Vector): {min: number, max: number} {
-        let projectionRange = vertexList.map(v => v.dot(axis));
+        let projection: number,
+            minProjection: number = Infinity,
+            maxProjection: number = -Infinity;
+
+        for(let i = 0; i < vertexList.length; i++) {
+            projection = vertexList[i].dot(axis);
+
+            if(projection < minProjection) {
+                minProjection = projection;
+            }
+
+            if(projection > maxProjection) {
+                maxProjection = projection;
+            }
+        }
 
         return {
-            min: Math.min.apply(Math, projectionRange),
-            max: Math.max.apply(Math, projectionRange)
+            min: minProjection,
+            max: maxProjection
         };  
     },
 
