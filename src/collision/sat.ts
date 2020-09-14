@@ -141,8 +141,8 @@ export class SAT {
     private detect(poly: Poly, geometry: Geometry, axes: Axis[]): { minOverlap: number, index: number } {
         let minOverlap = Infinity,
             overlaps, 
-            // getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
-            getOverlaps = this.getOverlaps,
+            getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
+            // getOverlaps = this.getOverlaps,
             i, index;
 
         // 将两个刚体投影到所有轴上
