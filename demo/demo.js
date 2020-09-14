@@ -5,7 +5,7 @@ const canvas = document.getElementById('canvas'),
 
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
-    gravity: Creator.v(0, 10),
+    gravity: Creator.v(0, 11),
     enableSleeping: true,
     enableCache: true,
     enableSATBoost: true
@@ -85,8 +85,7 @@ const options = {
     }
 };
 
-createStack(15, 8, 100, 30);
-
+createStack(14, 8, 100, 30);
 
 
 canvas.addEventListener('click', e => {

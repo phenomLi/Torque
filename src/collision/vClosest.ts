@@ -32,15 +32,15 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number 
  * @param poly 
  * @param geometry 
  */
-export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Axis, depth: number): Contact[] {
+export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Vector, depth: number): Contact[] {
     let contacts: Contact[] = [],
-        normalInv = normal.value.inv(_tempVector3),
+        normalInv = normal.inv(_tempVector3),
         index: number, prev: number, next: number,
         testVertices: Vector[] = [],
         i;
 
     // 寻找多边形A最接近多边形B的两个点
-    index = findClosestVertexIndex(vertexListA, normal.value);
+    index = findClosestVertexIndex(vertexListA, normal);
     prev = index > 0? index - 1: vertexListA.length - 1;
     next = index < vertexListA.length - 1? index + 1: 0;
 

@@ -89,7 +89,7 @@ export class ContactConstraint {
             if(!manifold.isActive) continue;
 
             collision = manifold.collision;
-            normal = collision.normal.value;
+            normal = collision.normal;
             tangent = collision.tangent;
             bodyA = collision.bodyA;
             bodyB = collision.bodyB;
@@ -156,7 +156,7 @@ export class ContactConstraint {
             if(!manifold.isActive) continue;
 
             collision = manifold.collision;
-            normal = collision.normal.value;
+            normal = collision.normal;
             tangent = collision.tangent;
             bodyA = collision.bodyA;
             bodyB = collision.bodyB;

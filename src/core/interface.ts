@@ -87,10 +87,6 @@ export class TorqueWorld {
     pause() {
         this.engine.timeStepper.pause();
     }
-
-    test() {
-        this.engine.test();
-    }
 }
 
 

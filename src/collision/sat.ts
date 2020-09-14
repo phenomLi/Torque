@@ -1,5 +1,5 @@
 import { Vector, _tempVector1, _tempVector4 } from "../math/vector";
-import { Axis, Poly, VertexList, Vertices } from "../common/vertices";
+import { Axis, Poly, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
 import { Collision, Geometry } from "./manifold";
 import { VClosest } from "./vClosest";
@@ -7,8 +7,6 @@ import { Contact } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
-
-
 
 /**
  * 分离轴算法
@@ -40,7 +38,7 @@ export class SAT {
         // 若能用缓存，使用缓存
         if(canReuse) {
             collision = prevCollision;
-            result = this.detect(poly, geometry, [collision.normal]);
+            result = this.detect(poly, geometry, [collision.axis]);
 
             if(result.minOverlap < 0) {
                 collision.collide = false;
@@ -59,10 +57,17 @@ export class SAT {
                 return collision;
             }
 
-            let normal = this.reviseNormal(axes[result.index], poly, geometry);
+            let axis = axes[result.index],
+                normal = this.reviseNormal(axis.value, poly, geometry);
+
+            collision.axis.value = axis.value;
+            collision.axis.supportVertexIndex = axis.supportVertexIndex;
+            collision.axis.oppositeVertexIndex = axis.oppositeVertexIndex;
+            collision.axis.opposite = axis.opposite;
+            collision.axis.origin = axis.origin;
 
             collision.normal = normal;
-            collision.tangent = normal.value.nor();
+            collision.tangent = normal.nor();
 
             collision.partA = poly;
             collision.partB = geometry;
@@ -94,7 +99,7 @@ export class SAT {
             },
             overlaps: number = (arcA.radius + arcB.radius) - axis.value.len(),
             collision: Collision = new Collision(),
-            normal: Axis;
+            normal: Vector;
 
         // 两圆心距离比两圆半径和要大，即没有发生碰撞
         if(overlaps < 0) {
@@ -102,18 +107,18 @@ export class SAT {
             return collision;
         }
 
-        normal = this.reviseNormal(axis, arcA, arcB);
-        normal.value = normal.value.nol();
+        normal = this.reviseNormal(axis.value, arcA, arcB).nol();
 
+        collision.axis = axis;
         collision.partA = arcA;
         collision.partB = arcB;
         collision.bodyA = arcA.body;
         collision.bodyB = arcB.body;
 
         collision.normal = normal;
-        collision.tangent = normal.value.nor();
+        collision.tangent = normal.nor();
 
-        let position = arcA.centroid.loc(normal.value.inv(_tempVector1), arcA.radius - overlaps / 2);
+        let position = arcA.centroid.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2);
 
         collision.contacts = [new Contact(position, overlaps)];
         collision.collide = true;
@@ -136,8 +141,8 @@ export class SAT {
     private detect(poly: Poly, geometry: Geometry, axes: Axis[]): { minOverlap: number, index: number } {
         let minOverlap = Infinity,
             overlaps, 
-            getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
-            // getOverlaps = this.getOverlaps,
+            // getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
+            getOverlaps = this.getOverlaps,
             i, index;
 
         // 将两个刚体投影到所有轴上
@@ -269,11 +274,12 @@ export class SAT {
             projection: number,
             overlap: number;
 
-        prev = next = oppositeIndex;
         projection = opposite[oppositeIndex].dot(axisVector);
-        lastPrevPro = lastNextPro = projection;
         overlap = supportProjection - projection; 
         maxOverlap = overlap;
+
+        prev = next = oppositeIndex;
+        lastPrevPro = lastNextPro = projection;
         
         do {
             if(!seekPrev && !seekNext) {
@@ -298,7 +304,7 @@ export class SAT {
             }
 
             if(seekNext) {
-                next = next < opposite.length - 1? next + 1: 0;
+                next = (next + 1) % opposite.length;
                 projection = opposite[next].dot(axisVector);
                 overlap = supportProjection - projection;
 
@@ -325,12 +331,9 @@ export class SAT {
      * @param bodyA 刚体A
      * @param bodyB 刚体B
      */
-    private reviseNormal(normal: Axis, geometryA: Geometry, geometryB: Geometry): Axis {
-        if (normal.value.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
-            return {
-                ...normal,
-                value: normal.value.inv(),
-            };
+    private reviseNormal(normal: Vector, geometryA: Geometry, geometryB: Geometry): Vector {
+        if (normal.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
+            return normal.inv();
         } 
 
         return normal;
@@ -364,13 +367,13 @@ export class SAT {
      * @param normal 
      * @param depth 
      */
-    private findContacts(poly: Poly, geometry: Geometry, normal: Axis, depth: number): Contact[] {
+    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
         if(geometry instanceof Poly) {
             return VClosest(poly.vertexList, geometry.vertexList, normal, depth);
             //return VClip(poly, geometry, normal, depth);
         }
         else {
-            let vertex = geometry.centroid.loc(normal.value, geometry.radius - depth / 2);
+            let vertex = geometry.centroid.loc(normal, geometry.radius - depth / 2);
             return [new Contact(vertex, depth)];
         }
     }

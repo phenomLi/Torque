@@ -26,8 +26,16 @@ export class Collision {
     partA: Geometry;
     // 碰撞子图形B
     partB: Geometry;
+    // 分离轴
+    axis: Axis = {
+        value: null,
+        oppositeVertexIndex: null,
+        supportVertexIndex: null,
+        opposite: null,
+        origin: null
+    };
     // 碰撞法线
-    normal: Axis;
+    normal: Vector;
     // 碰撞切线
     tangent: Vector;
     // 接触点

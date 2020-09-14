@@ -53,6 +53,18 @@ export interface EngineOpt {
 }
 
 
+let TimeList = [],
+    TestFlag = false;
+
+let test = document.getElementById('test');
+
+if(test) {
+    test.addEventListener('click', () => {
+        TestFlag = true;
+    });
+}
+
+
 // 主引擎
 export class Engine {
 
@@ -176,21 +188,22 @@ export class Engine {
             let end = performance.now(),
                 range = 60;
 
-            if(this.testFlag) {
-                if(this.timeList.length < range) {
-                    this.timeList.push(end - start);
+            if(TestFlag) {
+                if(TimeList.length < range) {
+                    TimeList.push(end - start);
                 }
                 else {
-                    let total = this.timeList.reduce((t, cur) => {
+                    let total = TimeList.reduce((t, cur) => {
                         return t + cur;
                     });
     
                     console.log(total / range);
-                    this.testFlag = false;
-                    this.timeList.length = 0;
+
+                    TestFlag = false;
+                    TimeList.length = 0;
                 }
             }
-
+            
             //console.log(collisions);
             
             this.manifoldTable.update(collisions, timeStamp);
@@ -245,9 +258,5 @@ export class Engine {
     setOption(opt: EngineOpt) {
         Util.merge(this, opt);
         Util.merge(this.timeStepper, opt);
-    }
-
-    test() {
-        this.testFlag = true;
     }
 }
