@@ -67,10 +67,12 @@ function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector)
         res.push(axes[prev]);
     }
 
-    axes[index].supportVertexIndex = index;
-    axes[index].opposite = opposite;
-    axes[index].origin = poly.vertexList;
-    res.push(axes[index]);
+    if(axes[index]) {
+        axes[index].supportVertexIndex = index;
+        axes[index].opposite = opposite;
+        axes[index].origin = poly.vertexList;
+        res.push(axes[index]);
+    }
 
     return res;
 }

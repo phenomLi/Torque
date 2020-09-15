@@ -266,8 +266,8 @@ export const Vertices = {
             vertexListA: Vector[], 
             vertexListB: Vector[],
             axes = poly.axes.slice(0),
-            axesA: Axis[], 
-            axesB: Axis[],
+            axesA: Axis[] = [], 
+            axesB: Axis[] = [],
             xAxis: Vector,
             vTest: Vector,
             vDiv: Vector,
@@ -307,8 +307,18 @@ export const Vertices = {
         vertexListB.unshift(dividePointA);
         vertexListB.push(dividePointB);
 
-        axesB = axes.splice(next, j - next);
-        axesA = axes;
+        // 将轴分别提取到两个图形中
+        for(i = 0; i < axes.length; i++) {
+            if(i >= next && i < j) {
+                axesB.push(axes[i]);
+            }
+            else {
+                axesA.push(axes[i]);
+            }
+        }
+
+        axesB.push(null);
+        axesA.splice(next, 0, null);
 
         partA = Vertices.create(poly.body, vertexListA);
         partB = Vertices.create(poly.body, vertexListB);
