@@ -2,8 +2,6 @@
 
  2D 刚体高性能物理引擎，不包含渲染。
 
-![](https://github.com/phenomLi/Torque/raw/master/images/GIF.gif)
-
 ## usage
 初始化一个 torque 实例
 ```javascript

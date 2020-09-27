@@ -26,7 +26,6 @@ export class SAT {
      * 多边形 - 多边形或圆形（geometry）
      * @param poly
      * @param geometry 
-     * @param intersection
      * @param prevCollision
      */
     polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
@@ -134,19 +133,22 @@ export class SAT {
 
     /**
      * 进行分离轴检测
-     * @param intersectionPartA 
-     * @param intersectionPartB 
+     * @param poly 
+     * @param geometry 
      * @param axes 
      */
     private detect(poly: Poly, geometry: Geometry, axes: Axis[]): { minOverlap: number, index: number } {
         let minOverlap = Infinity,
+            getOverlaps = this.enableSATBoost? this.selectiveProjectionMethod: this.fullProjectionMethod,
             overlaps, 
-            getOverlaps = this.enableSATBoost? this.getOverlaps_boost: this.getOverlaps,
-            // getOverlaps = this.getOverlaps,
             i, index;
 
         // 将两个刚体投影到所有轴上
         for(i = 0; i < axes.length; i++) {
+            if(axes[i] === null) {
+                continue;
+            }
+
             overlaps = getOverlaps(poly, geometry, axes[i]);
 
             if(overlaps < 0) {
@@ -173,7 +175,6 @@ export class SAT {
      * 获取测试轴
      * @param poly 
      * @param geometry 
-     * @param intersection
      */
     private getTestAxes(poly: Poly, geometry: Geometry): Axis[] {
         let axes: Axis[],
@@ -209,14 +210,12 @@ export class SAT {
     }
 
     /**
-     * 求投影重叠（常规方法）
+     * 全投影法（传统）
      * @param poly 
-     * @param geometry
-     * @param axis 投影轴
-     * @param intersection
-     * @param intersectionCenter
+     * @param geometry 
+     * @param axis 
      */
-    private getOverlaps(poly: Poly, geometry: Geometry, axis: Axis): number {
+    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): number {
         let axisVector: Vector = axis.value,
             partA = poly.vertexList,
             partB = geometry instanceof Poly? geometry.vertexList: geometry,
@@ -238,12 +237,12 @@ export class SAT {
     }
 
     /**
-     * 求投影重叠（加速方法）
+     * 选择投影法
      * @param poly 
      * @param geometry 
      * @param axis 
      */
-    private getOverlaps_boost(poly: Poly, geometry: Geometry, axis: Axis): number {
+    private selectiveProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): number {
         let axisVector: Vector = axis.value,
             opposite = axis.opposite;
             
@@ -362,8 +361,8 @@ export class SAT {
 
     /**
      * 寻找碰撞点
-     * @param intersectionPartA 
-     * @param intersectionPartB 
+     * @param poly 
+     * @param geometry 
      * @param normal 
      * @param depth 
      */

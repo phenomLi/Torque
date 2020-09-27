@@ -2,7 +2,6 @@ import { Vector } from "../math/vector";
 import { Bound } from "../collision/bound";
 import { Body } from "../body/body";
 import { Util } from "./util";
-import { Geometry } from "../collision/manifold";
 import { Arc } from "./arcs";
 
 

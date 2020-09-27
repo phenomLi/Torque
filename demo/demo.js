@@ -96,7 +96,7 @@ creator.polygon(500, 250, [
     ...options
 });
 
-createStack(14, 8, 100, 30);
+createStack(5, 8, 100, 30);
 
 
 canvas.addEventListener('click', e => {
@@ -107,19 +107,19 @@ canvas.addEventListener('click', e => {
         ...options
     });
 
-    creator.circle(x, y, getRandom(30, 10), {
+    creator.circle(x, y, 14, {
         fill: '#fce38a',
         ...options
     });
 
-    creator.isogon(x, y, getRandom(60, 30), getRandom(10, 4), {
+    creator.isogon(x, y, 20, getRandom(16, 4), {
         fill: '#778beb',
         ...options
     });
 });
 
 
-
+creator.t.start();
 
 
 
