@@ -42,7 +42,7 @@ export class ContactConstraint {
     private biasFactor: number;
 
     constructor() {
-        this.iterations = 20;
+        this.iterations = 15;
         this.slop = 0.02;
         this.biasFactor = 0.2;
     }

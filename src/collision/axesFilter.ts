@@ -51,31 +51,19 @@ function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector,
         axes: Axis[] = poly.axes,
         centroid: Vector = poly.centroid,
         vertex: Vector,
-        projection: number,
-        minProjection: number = Infinity,
+        d: number,
+        minD: number = Infinity,
         index: number = -1,
         opposite = geometry instanceof Poly? geometry.vertexList: geometry,
         res: Axis[] = [];
 
     for(let i = 0; i < v.length; i++) {
         vertex = v[i];
-        projection = vertex.dot(centroidVector);
+        d = (v[i].x - oppositeCentroid.x) ** 2 + (v[i].y - oppositeCentroid.y) ** 2;
 
-        if(projection < minProjection) {
-            if(index > -1) {
-                let d1 = (v[i].x - oppositeCentroid.x)**2 + (v[i].y - oppositeCentroid.y)**2,
-                    d2 = (v[index].x - oppositeCentroid.x)**2 + (v[index].y - oppositeCentroid.y)**2;
-
-                // 投影比完就比距离
-                if(d1 < d2) {
-                    minProjection = projection;
-                    index = i;
-                }
-            }
-            else {
-                minProjection = projection;
-                index = i;
-            }
+        if(d < minD) {
+            minD = d;
+            index = i;
         }
     }
 

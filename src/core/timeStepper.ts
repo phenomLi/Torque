@@ -73,9 +73,9 @@ export class TimeStepper {
 
         // 固定dt
         if (this.deltaFixed === false) {
-        
+
             // 动态计算dt
-            dt = (timeStamp - this.prevTime) || this.dt;
+            dt = (timeStamp - this.prevTime) / 1000 || this.dt;
             this.prevTime = timeStamp;
 
             // 根据过去的变化步长情况，优化当前步长，使引擎稳定

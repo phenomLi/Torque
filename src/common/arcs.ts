@@ -84,7 +84,7 @@ export const Arcs = {
      * @param point 
      */
     isContains(circle: Arc, point: Vector): boolean {
-        return circle.radius*circle.radius - circle.centroid.sub(point).len_s() > 0; 
+        return circle.radius ** 2 - circle.centroid.sub(point).len_s() > 0; 
     },
 
     /**
