@@ -204,6 +204,8 @@ export class Engine {
                 }
             }
             
+            collisions.pop();
+
             // console.log(collisions);
             
             this.manifoldTable.update(collisions, timeStamp);

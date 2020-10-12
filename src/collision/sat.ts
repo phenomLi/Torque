@@ -337,6 +337,7 @@ export class SAT {
             } while(prev !== next);
         }
 
+        // 
         maxOverlap = supportProjection - opposite[oppositeClosestIndex].dot(axisVector);
 
         return {
