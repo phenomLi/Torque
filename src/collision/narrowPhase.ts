@@ -6,7 +6,6 @@ import { Engine, EngineOpt } from "../core/engine";
 import { Collision, Geometry } from "./manifold";
 import { Util } from "../common/util";
 import { ManifoldTable } from "./manifoldTable";
-import { Bound } from "./bound";
 
 
 
@@ -51,11 +50,7 @@ export class NarrowPhase {
                     partB = partsB[k];
 
                     // 两个子图形包围盒不相交，跳过
-                    let axesA = partA instanceof Poly? partA.axes: [],
-                        axesB = partB instanceof Poly? partB.axes: [],
-                        intersection: boolean = partA.bound.isIntersect(partB.bound);
-
-                    if(!intersection) continue;
+                    if(!partA.bound.isIntersect(partB.bound)) continue;
 
                     prevCollision = this.getPrevCollision(partA, partB, this.engine.manifoldTable);
 

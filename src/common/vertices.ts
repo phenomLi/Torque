@@ -7,6 +7,11 @@ import { Arc } from "./arcs";
 
 // 顶点列表类型
 export type VertexList = Array<Vector>;
+// 边类型
+export type Edge = {
+    start: Vector;
+    end: Vector;
+};
 // 边法向量（轴）类型
 export type Axis = {
     value: Vector;
@@ -14,6 +19,7 @@ export type Axis = {
     oppositeVertexIndex: number;
     opposite: VertexList | Arc;
     origin: VertexList;
+    edge: Edge;
 };
 
 
@@ -145,7 +151,11 @@ export const Vertices = {
                     opposite: null,
                     origin: vertexList,
                     supportVertexIndex: null,
-                    oppositeVertexIndex: null
+                    oppositeVertexIndex: null,
+                    edge: {
+                        start: v[i],
+                        end: v[j]
+                    }
                 });
             }
 

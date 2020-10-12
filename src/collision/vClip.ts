@@ -1,106 +1,60 @@
-import { Poly } from "../common/vertices";
+import { Edge, VertexList } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
 import { Contact } from "../constraint/contact";
+import { MinOverlap } from "./sat";
 
-export type edge = { start: Vector; end: Vector };
-export type edgeInfo = {
-    e: edge;
-    d: number;
-    poly: Poly;
-};
 
 /**
- * 寻找 incident edge 和 reference edge
- * @param poly
- * @param edges
+ * 寻找 incident edge
+ * @param oppositeVertexList 
  * @param normal 
+ * @param oppositeClosestIndex 
  */
-function findEdge(poly: Poly, edges: { ref: edgeInfo, inc: edgeInfo }, normal: Vector) {
-    let v = poly.vertexList,
-        prev: Vector, cur: Vector, next: Vector, index: number,
-        d1, d2, d, min = Infinity,
-        e = { start: null, end: null };
+function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, oppositeClosestIndex: number): Edge {
+    let prev: Vector, cur: Vector, next: Vector, 
+        index: number = oppositeClosestIndex,
+        edge: Edge = { start: null, end: null };
 
-    for(let i = 0; i < v.length; i++) {
-        let dot = v[i].dot(normal);
-
-        if(dot < min) {
-            min = dot;
-            index = i;
-        }
-    }
-
-    cur = v[index];
-    prev = v[index === 0? v.length - 1: index - 1];
-    next = v[(index + 1) % v.length];
+    cur = oppositeVertexList[index];
+    prev = oppositeVertexList[index === 0? oppositeVertexList.length - 1: index - 1];
+    next = oppositeVertexList[(index + 1) % oppositeVertexList.length];
     cur.sub(prev, _tempVector1);
     cur.sub(next, _tempVector2);
 
-    d1 = Math.abs(_tempVector1.dot(normal));
-    d2 = Math.abs(_tempVector2.dot(normal));
+    let d1 = Math.abs(_tempVector1.dot(normal)),
+        d2 = Math.abs(_tempVector2.dot(normal));
 
     if(d1 < d2) {
-        e.start = prev;
-        e.end = cur;
-        d = d1;
-    }
-
-    if(d2 < d1) {
-        e.start = cur;
-        e.end = next;
-        d = d2;
-    }
-
-    if(edges.ref === null) {
-        edges.ref = {
-            poly,
-            d,
-            e
-        };
+        edge.start = prev;
+        edge.end = cur;
     }
     else {
-        if(d < edges.ref.d) {
-            edges.inc = edges.ref;
-            edges.ref = {
-                poly,
-                d,
-                e
-            };
-        }
-        else {
-            edges.inc = {
-                poly,
-                d,
-                e
-            };
-        }
+        edge.start = cur;
+        edge.end = next;
     }
+
+    return edge;
 }
 
-
-function clip(vertex: Vector[], refv: Vector, d: number): Vector[] {
-    let d1, d2, res: Vector[] = [];
-
-    d1 = vertex[0].dot(refv) - d;
-    d2 = vertex[1].dot(refv) - d;
+/**
+ * 筛选两边
+ * @param incEdge
+ * @param refV 
+ * @param d 
+ */
+function clipSide(incEdge: Edge, refV: Vector, d: number): number {
+    let d1 = incEdge.start.dot(refV) - d,
+        d2 = incEdge.end.dot(refV) - d;
 
     if(d1 >= 0) {
-        res.push(vertex[0]);
+        return 0;
     }
 
     if(d2 >= 0) {
-        res.push(vertex[1]);
-    }
-
-    // 若 两候选点在裁剪线两侧，则生成一个新交点
-    if(d1 * d2 < 0) {
-        let v = vertex[1].sub(vertex[0]);
-        v.scl(d1 / (d1 - d2), v).add(vertex[0], v);
-
-        res.push(v);
+        return 1;
     }
         
-    return res;
+    return -1;
 }
 
 /**
@@ -111,50 +65,54 @@ function clip(vertex: Vector[], refv: Vector, d: number): Vector[] {
  * @param normal 
  * @param depth
  */
-export function VClip(poly1: Poly, poly2: Poly, normal: Vector, depth: number): Contact[] {
-    let edges: { ref: edgeInfo, inc: edgeInfo } = { ref: null, inc: null },
-        vertex,
-        contact: Contact[] = [];
+export function VClip(minOverlap: MinOverlap): Contact[] {
+    let axis = minOverlap.axis,
+        v = axis.origin,
+        normal = axis.value,
+        depth: number = minOverlap.value,
+        incEdge: Edge,
+        refEdge: Edge,
+        contacts: Contact[] = [];
 
-    findEdge(poly1, edges, normal);
-    findEdge(poly2, edges, normal.inv());
+    incEdge = findIncidentEdge(<VertexList>axis.opposite, normal, minOverlap.oppositeClosestIndex);
+    refEdge = axis.edge;
 
-    const inc = edges.inc.e,
-          ref = edges.ref.e;
+    // ------------------------------------- 首先向 refEdge 的内部进行筛选 -------------------
 
-    let refv = ref.end.sub(ref.start).nol(),
-        refn = normal;
+    let refV = refEdge.end.sub(refEdge.start).nol(),
+        refN = normal,
+        d = refEdge.start.dot(refN),
+        d1 = incEdge.start.dot(refN) - d,
+        d2 = incEdge.end.dot(refN) - d;
 
-    vertex = [inc.start, inc.end];
-    vertex = clip(vertex, refv, ref.start.dot(refv));
-
-    // 只有一个潜在碰撞点，则不用继续测试了
-    if(vertex.length < 2) {
-        return vertex.map(item => new Contact(item, depth));
+    if(d1 < 0) {
+        contacts.push(new Contact(incEdge.start, depth));
     }
 
-    vertex = clip(vertex, refv.inv(refv), ref.end.dot(refv));
-
-    // 只有一个潜在碰撞点，则不用继续测试了
-    if(vertex.length < 2) {
-        return vertex.map(item => new Contact(item, depth));
+    if(d2 < 0) {
+        contacts.push(new Contact(incEdge.end, depth));
     }
     
-    if(edges.ref.poly.centroid.sub(ref.start).dot(refn) <= 0) {
-        refn = refn.inv();
+    // 如果只有一个碰撞点，就不用再继续测试了
+    if(contacts.length === 1) {
+        return contacts;
     }
 
-    let d = ref.start.dot(refn),
-        d1 = vertex[0].dot(refn) - d,
-        d2 = vertex[1].dot(refn) - d;
+    // ------------------------------------- 接下来进行两边筛选 -------------------
+    let incVertex: Vector[] = [incEdge.start, incEdge.end],
+        removeIndex: number = -1;
+    
+    removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
 
-    if(d1 > 0) {
-        contact.push(new Contact(vertex[0], d1));
+    if(removeIndex !== -1) {
+        incVertex[removeIndex] = refEdge.end;
     }
 
-    if(d2 > 0) {
-        contact.push(new Contact(vertex[1], d2));
+    removeIndex = clipSide(incEdge, refV.inv(refV), refEdge.start.dot(refV));
+
+    if(removeIndex !== -1) {
+        incVertex[removeIndex] = refEdge.start;
     }
 
-    return contact;
+    return incVertex.map(item => new Contact(item, depth));
 }

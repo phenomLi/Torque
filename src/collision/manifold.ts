@@ -32,7 +32,8 @@ export class Collision {
         oppositeVertexIndex: null,
         supportVertexIndex: null,
         opposite: null,
-        origin: null
+        origin: null,
+        edge: null
     };
     // 碰撞法线
     normal: Vector;
@@ -40,6 +41,8 @@ export class Collision {
     tangent: Vector;
     // 接触点
     contacts: Contact[];
+    // 对位多边形在法线方向上最接近本多边形的顶点的下标
+    oppositeClosestIndex: number;
     // 是否发生了碰撞
     collide: boolean;
 };

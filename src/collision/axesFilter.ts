@@ -6,19 +6,19 @@ import { Geometry } from "./manifold";
 
 
 export function axesFilter(geometryA: Geometry, geometryB: Geometry): Axis[] {
-    let centroidVector = geometryA.centroid.sub(geometryB.centroid, _tempVector1),
+    let centroidVector = geometryB.centroid.sub(geometryA.centroid, _tempVector1),
         axesA: Axis[] | number, axesB: Axis[] | number,
         supportIndexA: number, supportIndexB: number,
         i, res: Axis[] = [];
 
     if(geometryA instanceof Poly) {
-        axesA = findClosestAxes(geometryA, geometryB, centroidVector, geometryB.centroid);
+        axesA = findClosestAxes(geometryA, geometryB, centroidVector);
         supportIndexA = Array.isArray(axesA)? axesA[0].supportVertexIndex: axesA;
         
     }
 
     if(geometryB instanceof Poly) {
-        axesB = findClosestAxes(geometryB, geometryA, centroidVector.inv(centroidVector), geometryA.centroid);
+        axesB = findClosestAxes(geometryB, geometryA, centroidVector.inv(centroidVector));
         supportIndexB = Array.isArray(axesB)? axesB[0].supportVertexIndex: axesB;
     }
 
@@ -46,58 +46,78 @@ export function axesFilter(geometryA: Geometry, geometryB: Geometry): Axis[] {
  * @param centroidVector 
  * @param oppositeCentroid
  */
-function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector, oppositeCentroid: Vector): Axis[] | number {
+function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector): Axis[] | number {
     let v: VertexList = poly.vertexList,
         axes: Axis[] = poly.axes,
         centroid: Vector = poly.centroid,
-        vertex: Vector,
-        d: number,
-        minD: number = Infinity,
-        index: number = -1,
+        axis: Axis,
+        vStart: Vector, vEnd: Vector,
+        croStart: number, croEnd: number,
+        index: number = 0,
         opposite = geometry instanceof Poly? geometry.vertexList: geometry,
         res: Axis[] = [];
 
-    for(let i = 0; i < v.length; i++) {
-        vertex = v[i];
-        d = (v[i].x - oppositeCentroid.x) ** 2 + (v[i].y - oppositeCentroid.y) ** 2;
+    for(let i = 0; i < axes.length; i++) {
+        axis = axes[i];
 
-        if(d < minD) {
-            minD = d;
+        if(axis === null || axis.value.dot(centroidVector) <= 0) continue;
+        
+        vStart = axis.edge.start.sub(centroid, _tempVector2);
+        vEnd = axis.edge.end.sub(centroid, _tempVector3);
+
+        croStart = vStart.cro(centroidVector);
+        croEnd = vEnd.cro(centroidVector);
+
+        if(croStart === 0) {
+            res.push(axis);
+
+            let prev = i > 0? i - 1: axes.length - 1;
+            if(axes[prev]) {
+                res.push(axes[prev]);
+            }
+
             index = i;
+
+            break;
+        }
+        
+        if(croEnd === 0) {
+            res.push(axis);
+
+            let next = (i + 1) % axes.length;
+            if(axes[next]) {
+                res.push(axes[next]);
+            }
+
+            index = (i + 1) % v.length;
+
+            break;
+        }
+
+        if(croStart * croEnd < 0) {
+            res.push(axis);
+            index = i;
+
+            let d1 = axis.edge.start.dot(centroidVector),
+                d2 = axis.edge.end.dot(centroidVector);
+
+            if(d2 > d1) {
+                index = (i + 1) % v.length;
+            }
+            
+            break;
         }
     }
 
-    let prev = index > 0? index - 1: v.length - 1,
-        next =  index < v.length - 1? index + 1: 0,
-        prevAxis = axes[prev],
-        indexAxis = axes[index];
-
-    if(prevAxis && testEdge(centroid, centroidVector, v[index], v[prev])) {
-        prevAxis.supportVertexIndex = index;
-        prevAxis.opposite = opposite;
-        prevAxis.origin = poly.vertexList;
-        res.push(prevAxis);
-    }
-
-    if(indexAxis && testEdge(centroid, centroidVector, v[index], v[next])) {
-        indexAxis.supportVertexIndex = index;
-        indexAxis.opposite = opposite;
-        indexAxis.origin = poly.vertexList;
-        res.push(indexAxis);
-    }
-
     if(res.length) {
+        for(let i = 0; i < res.length; i++) {
+            res[i].supportVertexIndex = index;
+            res[i].opposite = opposite;
+            res[i].origin = poly.vertexList;
+        }
+
         return res;
     }
 
     return index;
 }
-
-
-function testEdge(centroid: Vector, centroidVector: Vector, support: Vector, opposite: Vector): boolean {
-    let v1 = support.sub(centroid, _tempVector2),
-        v2 = opposite.sub(centroid, _tempVector3);
-
-    return v1.cro(centroidVector) * v2.cro(centroidVector) <= 0;
-}
-

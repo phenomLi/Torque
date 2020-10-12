@@ -204,7 +204,7 @@ export class Engine {
                 }
             }
             
-            //console.log(collisions);
+            // console.log(collisions);
             
             this.manifoldTable.update(collisions, timeStamp);
             // 移除缓存表超时的碰撞对

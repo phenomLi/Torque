@@ -110,7 +110,7 @@ export class ManifoldTable {
         for(i = 0; i < this.list.length; i++) {
             manifold = this.list[i];
 
-            // 若流形的两刚体有其一处于休眠状态，更新事件，不清除
+            // 若流形的两刚体有其一处于休眠状态，更新时间，不清除
             if(manifold.bodyA.sleeping || manifold.bodyB.sleeping) {
                 manifold.timeUpdated = timeStamp;
                 continue;

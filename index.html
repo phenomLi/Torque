@@ -29,6 +29,7 @@
 
 <button id="status">暂停</button>
 <div id="mouse_pos" style="display: inline-block;"></div>
+<div style="display: inline-block;">FPS: <span id="fps"></span></div>
 
 <script src="./demo/lib/zrender.min.js"></script>
 <script src="./dist/torque.js"></script>
@@ -39,7 +40,8 @@
 let engineStatus = true; 
 
 const mouse_pos = document.getElementById('mouse_pos'),
-      status = document.getElementById('status');
+      status = document.getElementById('status'),
+      fps = document.getElementById('fps');
 
 canvas.addEventListener('mousemove', e => {
     mouse_pos.innerText = 'x: ' + e.offsetX + '  y: ' + e.offsetY;
@@ -59,6 +61,9 @@ status.addEventListener('click', () => {
 });
 
 
+creator.t.step(() => {
+    fps.innerText = creator.t.getFPS().toFixed(1);
+});
 
 
 </script>

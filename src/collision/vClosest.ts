@@ -1,6 +1,7 @@
 import { Axis, VertexList, Vertices } from "../common/vertices";
 import { Vector, _tempVector3 } from "../math/vector";
 import { Contact } from "../constraint/contact";
+import { MinOverlap } from "./sat";
 
 
 /**
@@ -8,10 +9,11 @@ import { Contact } from "../constraint/contact";
  * @param vertexList 
  * @param normal 
  */
-function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number {
+function findClosestVertexIndex(vertexList: VertexList, normal: Vector, supportIndex: number): number {
     let projection: number,
-        minProjection: number = Infinity,
         index: number;
+
+    let minProjection = Infinity;
 
     for(let i = 0; i < vertexList.length; i++) {
         projection = vertexList[i].dot(normal);
@@ -22,6 +24,49 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number 
         }
     }
 
+    // let prev: number, next: number, 
+    //     seekPrev: boolean = true,
+    //     seekNext: boolean = true,
+    //     lastPrevPro: number,
+    //     lastNextPro: number;
+
+    // projection = vertexList[supportIndex].dot(normal);
+    // prev = next = supportIndex;
+    // lastPrevPro = lastNextPro = projection;
+    
+    // do {
+    //     if(!seekPrev && !seekNext) {
+    //         break;
+    //     } 
+
+    //     if(seekPrev) {
+    //         prev = prev > 0? prev - 1: vertexList.length - 1;
+    //         projection = vertexList[prev].dot(normal);
+
+    //         if(projection > lastPrevPro) {
+    //             seekPrev = false;
+    //         }
+    //         else {
+    //             lastPrevPro = projection;
+    //             index = prev;
+    //         }
+    //     }
+
+    //     if(seekNext) {
+    //         next = (next + 1) % vertexList.length;
+    //         projection = vertexList[next].dot(normal);
+
+    //         if(projection > lastNextPro) {
+    //             seekNext = false;
+    //         }
+    //         else {
+    //             lastNextPro = projection;
+    //             index = next;
+    //         }
+    //     }
+
+    // } while(prev !== next);
+
     return index;
 }
 
@@ -29,18 +74,21 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number 
 /**
  * 最近内部顶点法寻找碰撞点
  * 详见：https://github.com/phenomLi/Blog/issues/41
- * @param poly 
- * @param geometry 
+ * @param vertexListA 
+ * @param vertexListB 
+ * @param normal 
+ * @param minOverlap
  */
-export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Vector, depth: number): Contact[] {
+export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Vector, minOverlap: MinOverlap): Contact[] {
     let contacts: Contact[] = [],
         normalInv = normal.inv(_tempVector3),
+        depth = minOverlap.value,
         index: number, prev: number, next: number,
         testVertices: Vector[] = [],
         i;
 
     // 寻找多边形A最接近多边形B的两个点
-    index = findClosestVertexIndex(vertexListA, normal);
+    index = findClosestVertexIndex(vertexListA, normal, 0);
     prev = index > 0? index - 1: vertexListA.length - 1;
     next = index < vertexListA.length - 1? index + 1: 0;
 
@@ -63,7 +111,7 @@ export function VClosest(vertexListA: VertexList, vertexListB: VertexList, norma
     testVertices.length = 0;
 
     // 同理上面
-    index = findClosestVertexIndex(vertexListB, normalInv);
+    index = findClosestVertexIndex(vertexListB, normalInv, 0);
     prev = index > 0? index - 1: vertexListB.length - 1;
     next = index < vertexListB.length - 1? index + 1: 0;
 

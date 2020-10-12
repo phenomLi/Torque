@@ -4,6 +4,15 @@ import { Axis, Poly, Vertices } from "./vertices";
 import { Bound } from "../collision/bound";
 
 
+const _tempDynamicAxis: Axis = {
+    value: null,
+    opposite: null,
+    origin: null,
+    supportVertexIndex: null,
+    oppositeVertexIndex: null,
+    edge: null
+};
+
 
 // 一个圆形信息包
 export class Arc {
@@ -49,13 +58,10 @@ export const Arcs = {
      */
     getAxes(circle: Arc, poly: Poly): Axis {
         let closestVertex = Vertices.getClosestVertex(circle.centroid, poly.vertexList);
-        return {
-            value: closestVertex.sub(circle.centroid).nol(),
-            opposite: null,
-            origin: null,
-            supportVertexIndex: null,
-            oppositeVertexIndex: null
-        };
+
+        _tempDynamicAxis.value = closestVertex.sub(circle.centroid).nol();
+
+        return _tempDynamicAxis;
     },
 
     getBound(centroid: Vector, radius: number): Bound {

@@ -87,6 +87,13 @@ export class TorqueWorld {
     pause() {
         this.engine.timeStepper.pause();
     }
+
+    /**
+     * 获取帧率
+     */
+    getFPS(): number {
+        return this.engine.timeStepper.getFPS();
+    }
 }
 
 

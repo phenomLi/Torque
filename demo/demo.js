@@ -6,7 +6,7 @@ const canvas = document.getElementById('canvas'),
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
     gravity: Creator.v(0, 11),
-    enableSleeping: true,
+    enableSleeping: false,
     enableCache: true,
     enableSATBoost: true
 });
@@ -85,7 +85,19 @@ const options = {
     }
 };
 
-creator.polygon(500, 250, [
+creator.polygon(600, 250, [
+    [0, 0], [20, 0], [20, 100], 
+    [70, 150], [170, 150], [210, 100], [210, 0],
+    [230, 0], [230, 100], [170, 170], 
+    [70, 170], [0, 100], 
+], {
+    fixed: true,
+    fill: '#778beb',
+    rotation: Math.PI,
+    ...options
+});
+
+creator.polygon(300, 250, [
     [0, 0], [20, 0], [20, 100], 
     [70, 150], [170, 150], [210, 100], [210, 0],
     [230, 0], [230, 100], [170, 170], 
@@ -96,7 +108,7 @@ creator.polygon(500, 250, [
     ...options
 });
 
-createStack(5, 8, 100, 30);
+createStack(5, 5, 100, 30);
 
 
 canvas.addEventListener('click', e => {
@@ -117,6 +129,11 @@ canvas.addEventListener('click', e => {
         ...options
     });
 });
+
+// creator.rect(615, 250, 60, 30, {
+//     fill: '#f38181',
+//     ...options
+// });
 
 
 creator.t.start();

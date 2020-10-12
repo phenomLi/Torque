@@ -42,7 +42,7 @@ export class ContactConstraint {
     private biasFactor: number;
 
     constructor() {
-        this.iterations = 15;
+        this.iterations = 18;
         this.slop = 0.02;
         this.biasFactor = 0.2;
     }
@@ -122,6 +122,22 @@ export class ContactConstraint {
                 contact.shareTangent = 1 / invMassTangent;
 
                 contact.bias = this.biasFactor * (1 / dt) * Math.max(0, contact.depth - this.slop);
+
+                // warm start
+                if(contact.normalImpulse !== 0 || contact.tangentImpulse !== 0) {
+                    let p = _tempVector3;
+
+                    p.x = normal.x * contact.normalImpulse + tangent.x * contact.tangentImpulse;
+                    p.y = normal.y * contact.normalImpulse + tangent.y * contact.tangentImpulse;
+
+                    if(!bodyA.sleeping && !bodyA.fixed) {
+                        bodyA.applyImpulse(p, contact.offsetA, dt);
+                    }
+    
+                    if(!bodyB.sleeping && !bodyB.fixed) {
+                        bodyB.applyImpulse(p.inv(p), contact.offsetB, dt); 
+                    }
+                }
             }
         }
 

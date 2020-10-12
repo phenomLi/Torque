@@ -158,4 +158,11 @@ export class TimeStepper {
         Event.emit(this.engine, 'pause');
         window.cancelAnimationFrame(this.raf);
     }
+
+    /**
+     * 获取帧率
+     */
+    getFPS(): number {
+        return this.fps;
+    }
 }

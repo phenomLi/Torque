@@ -2,11 +2,20 @@ import { Vector, _tempVector1, _tempVector4 } from "../math/vector";
 import { Axis, Poly, Vertices } from "../common/vertices";
 import { Arcs, Arc } from "../common/arcs";
 import { Collision, Geometry } from "./manifold";
-import { VClosest } from "./vClosest";
 import { Contact } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
+import { VClip } from "./vClip";
+
+
+// 投影重叠类型
+export type MinOverlap = {
+    value: number;
+    axis: Axis;
+    oppositeClosestIndex: number;
+};
+
 
 /**
  * 分离轴算法
@@ -16,7 +25,6 @@ import { axesFilter } from "./axesFilter";
 export class SAT {
     // 是否开启SAT加速
     private enableSATBoost: boolean = true;
-    private polySimplificationThreshold: number = 5;
 
     constructor(opt: EngineOpt) {
         Util.merge(this, opt);
@@ -31,40 +39,48 @@ export class SAT {
     polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
         let canReuse: boolean = this.canReuseCollision(poly, geometry, prevCollision),
             collision: Collision = null,
-            result = null,
+            minOverlap: MinOverlap,
             axes: Axis[];
 
         // 若能用缓存，使用缓存
         if(canReuse) {
             collision = prevCollision;
-            result = this.detect(poly, geometry, [collision.axis]);
+            minOverlap = this.detect(poly, geometry, [collision.axis], collision.oppositeClosestIndex);
 
-            if(result.minOverlap < 0) {
+            if(minOverlap === null) {
                 collision.collide = false;
                 return collision;
+            }
+
+            let prevContacts = collision.contacts;
+            for(let i = 0; i < prevContacts.length; i++) {
+                prevContacts[i].depth = minOverlap.value;
             }
         }
         // 若不能用缓存，则进行完整的测试
         else {
             collision = new Collision();
             axes = this.getTestAxes(poly, geometry);
-            result = this.detect(poly, geometry, axes);
+            minOverlap = this.detect(poly, geometry, axes);
 
             // 若发现两个刚体投影的重叠部分是负的，即表示它们没相交
-            if(result.minOverlap < 0) {
+            if(minOverlap === null) {
                 collision.collide = false;
                 return collision;
             }
 
-            let axis = axes[result.index],
-                normal = this.reviseNormal(axis.value, poly, geometry);
+            let axis = minOverlap.axis,
+                normal = this.reviseNormal(minOverlap.axis.value, poly, geometry);
 
+            // 此处collision.axis与minOverlap.axis不能共享一个对象，因为collision.axis是根据不同碰撞而变化的，而minOverlap.axis不能变
             collision.axis.value = axis.value;
             collision.axis.supportVertexIndex = axis.supportVertexIndex;
             collision.axis.oppositeVertexIndex = axis.oppositeVertexIndex;
             collision.axis.opposite = axis.opposite;
             collision.axis.origin = axis.origin;
+            collision.axis.edge = axis.edge;
 
+            collision.oppositeClosestIndex = minOverlap.oppositeClosestIndex;
             collision.normal = normal;
             collision.tangent = normal.nor();
 
@@ -72,12 +88,12 @@ export class SAT {
             collision.partB = geometry;
             collision.bodyA = poly.body;
             collision.bodyB = geometry.body;
+
+            // 计算碰撞点
+            collision.contacts = this.findContacts(poly, geometry, normal, minOverlap);
         }
 
         collision.collide = true;
-
-        // 计算碰撞点
-        collision.contacts = this.findContacts(poly, geometry, collision.normal, result.minOverlap);
 
         return collision;
     }
@@ -89,14 +105,8 @@ export class SAT {
      * @param prevCollision
      */
     circleCollideCircle(arcA: Arc, arcB: Arc, prevCollision: Collision): Collision {
-        let axis: Axis = {
-                value: arcA.centroid.sub(arcB.centroid, _tempVector1),
-                opposite: null,
-                origin: null,
-                supportVertexIndex: null,
-                oppositeVertexIndex: null
-            },
-            overlaps: number = (arcA.radius + arcB.radius) - axis.value.len(),
+        let axis: Vector = arcA.centroid.sub(arcB.centroid, _tempVector1),
+            overlaps: number = (arcA.radius + arcB.radius) - axis.len(),
             collision: Collision = new Collision(),
             normal: Vector;
 
@@ -106,9 +116,9 @@ export class SAT {
             return collision;
         }
 
-        normal = this.reviseNormal(axis.value, arcA, arcB).nol();
+        normal = this.reviseNormal(axis, arcA, arcB).nol();
 
-        collision.axis = axis;
+        collision.axis = null;
         collision.partA = arcA;
         collision.partB = arcB;
         collision.bodyA = arcA.body;
@@ -136,11 +146,13 @@ export class SAT {
      * @param poly 
      * @param geometry 
      * @param axes 
+     * @param prevOppositeClosestIndex
      */
-    private detect(poly: Poly, geometry: Geometry, axes: Axis[]): { minOverlap: number, index: number } {
-        let minOverlap = Infinity,
+    private detect(poly: Poly, geometry: Geometry, axes: Axis[], prevOppositeClosestIndex?: number): MinOverlap {
+        let minOverlap: number = Infinity,
+            oppositeClosestIndex: number,
             getOverlaps = this.enableSATBoost? this.selectiveProjectionMethod: this.fullProjectionMethod,
-            overlaps, 
+            overlaps: {depth: number, oppositeClosestIndex: number}, 
             i, index;
 
         // 将两个刚体投影到所有轴上
@@ -149,24 +161,23 @@ export class SAT {
                 continue;
             }
 
-            overlaps = getOverlaps(poly, geometry, axes[i]);
+            overlaps = getOverlaps(poly, geometry, axes[i], prevOppositeClosestIndex);
 
-            if(overlaps < 0) {
-                return {
-                    minOverlap: overlaps, 
-                    index
-                }
+            if(overlaps.depth < 0) {
+                return null;
             }
 
-            if(overlaps < minOverlap) {
-                minOverlap = overlaps;
+            if(overlaps.depth < minOverlap) {
+                minOverlap = overlaps.depth;
+                oppositeClosestIndex = overlaps.oppositeClosestIndex;
                 index = i;
             }
         }
 
         return {
-            minOverlap, 
-            index
+            value: minOverlap,
+            oppositeClosestIndex,
+            axis: axes[index],
         }
     } 
 
@@ -215,7 +226,7 @@ export class SAT {
      * @param geometry 
      * @param axis 
      */
-    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): number {
+    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): {depth: number, oppositeClosestIndex: number} {
         let axisVector: Vector = axis.value,
             partA = poly.vertexList,
             partB = geometry instanceof Poly? geometry.vertexList: geometry,
@@ -233,7 +244,10 @@ export class SAT {
             projection2 = Arcs.projection(partB, axisVector);
         }
 
-        return Math.min(projection1.max - projection2.min, projection2.max - projection1.min);
+        return {
+            depth: Math.min(projection1.max - projection2.min, projection2.max - projection1.min),
+            oppositeClosestIndex: -1
+        };
     }
 
     /**
@@ -241,8 +255,9 @@ export class SAT {
      * @param poly 
      * @param geometry 
      * @param axis 
+     * @param oppositeClosestIndex
      */
-    private selectiveProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): number {
+    private selectiveProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis, oppositeClosestIndex?: number): {depth: number, oppositeClosestIndex: number} {
         let axisVector: Vector = axis.value,
             opposite = axis.opposite;
             
@@ -251,7 +266,10 @@ export class SAT {
             let projection1 = Vertices.projection(poly.vertexList, axisVector),
                 projection2 = Arcs.projection(<Arc>geometry, axisVector);
 
-            return Math.min(projection1.max - projection2.min, projection2.max - projection1.min);
+            return {
+                depth: Math.min(projection1.max - projection2.min, projection2.max - projection1.min),
+                oppositeClosestIndex
+            };
         }
 
         let supportVertex = axis.origin[axis.supportVertexIndex],
@@ -260,68 +278,71 @@ export class SAT {
         // 对面是圆形
         if(opposite instanceof Arc) {
             let circleProjection = Arcs.projection(opposite, axisVector);
-            return supportProjection - circleProjection.min;
+            return {
+                depth: supportProjection - circleProjection.min,
+                oppositeClosestIndex
+            };
         }
         
-        let oppositeIndex = axis.oppositeVertexIndex,
-            maxOverlap: number = -Infinity,
-            prev: number, next: number, 
-            seekPrev: boolean = true,
-            seekNext: boolean = true,
-            lastPrevPro: number,
-            lastNextPro: number,
-            projection: number,
-            overlap: number;
+        let maxOverlap: number = -Infinity;
 
-        projection = opposite[oppositeIndex].dot(axisVector);
-        overlap = supportProjection - projection; 
-        maxOverlap = overlap;
+        // 若最近点没有缓存，执行爬山法重新计算最近点
+        if(oppositeClosestIndex === undefined) {
+            let oppositeIndex = axis.oppositeVertexIndex,
+                prev: number, next: number, 
+                seekPrev: boolean = true,
+                seekNext: boolean = true,
+                lastPrevPro: number,
+                lastNextPro: number,
+                projection: number;
 
-        prev = next = oppositeIndex;
-        lastPrevPro = lastNextPro = projection;
-        
-        do {
-            if(!seekPrev && !seekNext) {
-                break;
-            } 
+            projection = opposite[oppositeIndex].dot(axisVector);
+            prev = next = oppositeIndex;
+            lastPrevPro = lastNextPro = projection;
+            oppositeClosestIndex = oppositeIndex;
 
-            if(seekPrev) {
-                prev = prev > 0? prev - 1: opposite.length - 1;
-                projection = opposite[prev].dot(axisVector);
-                overlap = supportProjection - projection;
-
-                if(projection > lastPrevPro) {
-                    seekPrev = false;
-                }
-                else {
-                    if(overlap > maxOverlap) {
-                        maxOverlap = overlap;
-                    }
+            do {
+                if(!seekPrev && !seekNext) {
+                    break;
+                } 
     
-                    lastPrevPro = projection;
-                }
-            }
-
-            if(seekNext) {
-                next = (next + 1) % opposite.length;
-                projection = opposite[next].dot(axisVector);
-                overlap = supportProjection - projection;
-
-                if(projection > lastNextPro) {
-                    seekNext = false;
-                }
-                else {
-                    if(overlap > maxOverlap) {
-                        maxOverlap = overlap;
-                    }
+                if(seekPrev) {
+                    prev = prev > 0? prev - 1: opposite.length - 1;
+                    projection = opposite[prev].dot(axisVector);
     
-                    lastNextPro = projection;
+                    if(projection > lastPrevPro) {
+                        seekPrev = false;
+                        prev = (prev + 1) % opposite.length;
+                    }
+                    else {
+                        oppositeClosestIndex = prev;
+                        lastPrevPro = projection;
+                    }
                 }
-            }
+    
+                if(seekNext) {
+                    next = (next + 1) % opposite.length;
+                    projection = opposite[next].dot(axisVector);
+    
+                    if(projection > lastNextPro) {
+                        seekNext = false;
+                        next = next > 0? next - 1: opposite.length - 1;
+                    }
+                    else {
+                        oppositeClosestIndex = next;
+                        lastNextPro = projection;
+                    }
+                }
+    
+            } while(prev !== next);
+        }
 
-        } while(prev !== next);
+        maxOverlap = supportProjection - opposite[oppositeClosestIndex].dot(axisVector);
 
-        return maxOverlap;
+        return {
+            depth: maxOverlap,
+            oppositeClosestIndex
+        };
     }
 
     /**
@@ -360,20 +381,20 @@ export class SAT {
     }
 
     /**
-     * 寻找碰撞点
+     * 求解碰撞点
      * @param poly 
      * @param geometry 
-     * @param normal 
-     * @param depth 
+     * @param normal
+     * @param minOverlap
      */
-    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, depth: number): Contact[] {
+    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, minOverlap: MinOverlap): Contact[] {
         if(geometry instanceof Poly) {
-            return VClosest(poly.vertexList, geometry.vertexList, normal, depth);
-            //return VClip(poly, geometry, normal, depth);
+            // return VClosest(poly.vertexList, geometry.vertexList, normal, minOverlap);
+            return VClip(minOverlap);
         }
         else {
-            let vertex = geometry.centroid.loc(normal, geometry.radius - depth / 2);
-            return [new Contact(vertex, depth)];
+            let vertex = geometry.centroid.loc(minOverlap.axis.value, geometry.radius - minOverlap.value / 2);
+            return [new Contact(vertex, minOverlap.value)];
         }
     }
 };
