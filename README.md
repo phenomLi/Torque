@@ -2,8 +2,6 @@
 
  2D 刚体高性能物理引擎，不包含渲染。
 
-![](https://github.com/phenomLi/Torque/raw/master/images/GIF.gif)
-
 ## usage
 初始化一个 torque 实例
 ```javascript
@@ -49,8 +47,9 @@ zr.add(rectShape);
 
 
 ## feature
-- **SATBoost技术**
+- **NFSP-SAT技术**
 - 休眠/唤醒技术
+- Warm Start
 - Sequential Impulses
 - 碰撞缓存/复用技术
 - 碰撞过滤
@@ -59,16 +58,15 @@ zr.add(rectShape);
 - 固定的刚体
 - 摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
-- 复合刚体（TODO） 
-- 弹簧约束（TODO）
 
 ## demo
 [戳这里](https://phenomli.github.io/Torque/)
 
-## 关于SATboost
-SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一个优化算法，能大幅提高碰撞检测的效率。在给定7 * 17个正16边形的静止碰撞（rest collision）条件下，与未经过优化的常规SAT对比结果如下（关闭碰撞复用和休眠功能）：
+## 关于NFSP-SAT
+NFSP-SAT技术是本人研究得到的针对SAT（分离轴测试算法）的一个优化算法，能大幅提高碰撞检测的效率。在给定7 * 17个正16边形的静止碰撞（rest collision）条件下，与未经过优化的常规SAT对比结果如下（关闭碰撞复用和休眠功能）：
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信图片_20200913174835.png)
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信截图_20200913175522.png)
 
+NFSP-SAT主要针对SAT进行改进，但同时，NFSP-SAT也优化了碰撞复用和碰撞点求解的性能。
 ## A.D.
 想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
