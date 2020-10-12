@@ -15,14 +15,11 @@ import { PolygonOpt } from "./polygon";
  * 刚体类型
  * 圆形：0
  * 多边形：1
- * 胶囊体：2
- * 平面：3
  * 复合体：4
  */
 export enum bodyType {
     circle = 0,
     polygon = 1,
-    capsule = 2,
     composite = 3
 };
 

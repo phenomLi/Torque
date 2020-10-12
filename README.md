@@ -51,14 +51,14 @@ zr.add(rectShape);
 - 休眠/唤醒技术
 - Warm Start
 - Sequential Impulses
-- 碰撞缓存/复用技术
+- 基于NFSP-SAT的碰撞缓存/复用技术
 - 碰撞过滤
+- 基于NFSP-SAT的V-clip碰撞点求解方法
 - 动态 dt
 - 凹多边形
 - 固定的刚体
 - 摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
-- ......
 
 ## demo
 [戳这里](https://phenomli.github.io/Torque/)

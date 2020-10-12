@@ -9,7 +9,7 @@ import { MinOverlap } from "./sat";
  * @param vertexList 
  * @param normal 
  */
-function findClosestVertexIndex(vertexList: VertexList, normal: Vector, supportIndex: number): number {
+function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number {
     let projection: number,
         index: number;
 
@@ -23,49 +23,6 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector, supportI
             index = i;
         }
     }
-
-    // let prev: number, next: number, 
-    //     seekPrev: boolean = true,
-    //     seekNext: boolean = true,
-    //     lastPrevPro: number,
-    //     lastNextPro: number;
-
-    // projection = vertexList[supportIndex].dot(normal);
-    // prev = next = supportIndex;
-    // lastPrevPro = lastNextPro = projection;
-    
-    // do {
-    //     if(!seekPrev && !seekNext) {
-    //         break;
-    //     } 
-
-    //     if(seekPrev) {
-    //         prev = prev > 0? prev - 1: vertexList.length - 1;
-    //         projection = vertexList[prev].dot(normal);
-
-    //         if(projection > lastPrevPro) {
-    //             seekPrev = false;
-    //         }
-    //         else {
-    //             lastPrevPro = projection;
-    //             index = prev;
-    //         }
-    //     }
-
-    //     if(seekNext) {
-    //         next = (next + 1) % vertexList.length;
-    //         projection = vertexList[next].dot(normal);
-
-    //         if(projection > lastNextPro) {
-    //             seekNext = false;
-    //         }
-    //         else {
-    //             lastNextPro = projection;
-    //             index = next;
-    //         }
-    //     }
-
-    // } while(prev !== next);
 
     return index;
 }
@@ -88,7 +45,7 @@ export function VClosest(vertexListA: VertexList, vertexListB: VertexList, norma
         i;
 
     // 寻找多边形A最接近多边形B的两个点
-    index = findClosestVertexIndex(vertexListA, normal, 0);
+    index = findClosestVertexIndex(vertexListA, normal);
     prev = index > 0? index - 1: vertexListA.length - 1;
     next = index < vertexListA.length - 1? index + 1: 0;
 
@@ -111,7 +68,7 @@ export function VClosest(vertexListA: VertexList, vertexListB: VertexList, norma
     testVertices.length = 0;
 
     // 同理上面
-    index = findClosestVertexIndex(vertexListB, normalInv, 0);
+    index = findClosestVertexIndex(vertexListB, normalInv);
     prev = index > 0? index - 1: vertexListB.length - 1;
     next = index < vertexListB.length - 1? index + 1: 0;
 

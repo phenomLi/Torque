@@ -6,7 +6,7 @@ const canvas = document.getElementById('canvas'),
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
     gravity: Creator.v(0, 11),
-    enableSleeping: false,
+    enableSleeping: true,
     enableCache: true,
     enableSATBoost: true
 });
@@ -129,12 +129,6 @@ canvas.addEventListener('click', e => {
         ...options
     });
 });
-
-// creator.rect(615, 250, 60, 30, {
-//     fill: '#f38181',
-//     ...options
-// });
-
 
 creator.t.start();
 

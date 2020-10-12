@@ -7,6 +7,7 @@ import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
 import { VClip } from "./vClip";
+import { VClosest } from "./vClosest";
 
 
 // 投影重叠类型
@@ -337,7 +338,6 @@ export class SAT {
             } while(prev !== next);
         }
 
-        // 
         maxOverlap = supportProjection - opposite[oppositeClosestIndex].dot(axisVector);
 
         return {

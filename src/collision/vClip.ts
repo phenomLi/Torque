@@ -67,7 +67,6 @@ function clipSide(incEdge: Edge, refV: Vector, d: number): number {
  */
 export function VClip(minOverlap: MinOverlap): Contact[] {
     let axis = minOverlap.axis,
-        v = axis.origin,
         normal = axis.value,
         depth: number = minOverlap.value,
         incEdge: Edge,
@@ -83,36 +82,36 @@ export function VClip(minOverlap: MinOverlap): Contact[] {
         refN = normal,
         d = refEdge.start.dot(refN),
         d1 = incEdge.start.dot(refN) - d,
-        d2 = incEdge.end.dot(refN) - d;
+        d2 = incEdge.end.dot(refN) - d,
+        incVertex: Vector[] = [],
+        removeIndex: number = -1;
 
     if(d1 < 0) {
-        contacts.push(new Contact(incEdge.start, depth));
+        incVertex[0] = incEdge.start;
     }
 
     if(d2 < 0) {
-        contacts.push(new Contact(incEdge.end, depth));
-    }
-    
-    // 如果只有一个碰撞点，就不用再继续测试了
-    if(contacts.length === 1) {
-        return contacts;
+        incVertex[1] = incEdge.end;
     }
 
     // ------------------------------------- 接下来进行两边筛选 -------------------
-    let incVertex: Vector[] = [incEdge.start, incEdge.end],
-        removeIndex: number = -1;
-    
     removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
-
-    if(removeIndex !== -1) {
+    if(removeIndex !== -1 && incVertex[removeIndex]) {
         incVertex[removeIndex] = refEdge.end;
     }
 
     removeIndex = clipSide(incEdge, refV.inv(refV), refEdge.start.dot(refV));
-
-    if(removeIndex !== -1) {
+    if(removeIndex !== -1 && incVertex[removeIndex]) {
         incVertex[removeIndex] = refEdge.start;
     }
 
-    return incVertex.map(item => new Contact(item, depth));
+    if(incVertex[0]) {
+        contacts.push(new Contact(incVertex[0], depth));
+    }
+
+    if(incVertex[1]) {
+        contacts.push(new Contact(incVertex[1], depth));
+    }
+
+    return contacts;
 }

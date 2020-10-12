@@ -203,8 +203,6 @@ export class Engine {
                     TimeList.length = 0;
                 }
             }
-            
-            collisions.pop();
 
             // console.log(collisions);
             
