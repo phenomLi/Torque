@@ -6,7 +6,6 @@ import { Vector, _tempVector1 } from "../math/vector";
 import { Bound } from "../collision/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
-import { Event } from "../event/eventEmitter";
 import { PolygonOpt } from "./polygon";
 
 
@@ -70,6 +69,8 @@ export interface BodyOpt {
         sleepStart: (body: Body) => void;
         // 结束休眠
         sleepEnd: (body: Body) => void;
+        // 发生了碰撞
+        onCollide: (body: Body) => void;
     }
 }
 
@@ -77,6 +78,8 @@ export interface BodyOpt {
 export class Body {
     // id
     id: number;
+    // 字符串的id
+    stringId: string;
     // 类型
     type: number;
     // 引擎实例
@@ -119,38 +122,25 @@ export class Body {
     restitution: number;
     // 约束点
     constraint: Vector;
-    // 固定
-    fixed: boolean;
+    // 静态的
+    static: boolean;
+    // 运动的
+    kinetic: boolean;
     // 休眠
     sleeping: boolean;
     // 休眠计数器
     sleepCounter: number;
-    // 刚体所受的碰撞个数
-    collisionNum: number;
     // 碰撞码
     mask: number;
     // 子图形
     parts;
     // 包围盒
     bound: Bound;
+    // 与该刚体碰撞的刚体列表
+    contactBodies: { [key: string]: Body };
 
     // 方法
-    methods: {
-        // 碰撞过滤器
-        filter: (maskA: number, maskB: number) => boolean;
-        // 挂载前
-        beforeAppend: (body: Body) => void;
-        // 挂载后
-        afterAppend: (body: Body) => void;
-        // 移除前
-        beforeRemove: (body: Body) => void;
-        // 移除后
-        afterRemove: (body: Body) => void;
-        // 开始休眠
-        sleepStart: (body: Body) => void;
-        // 结束休眠
-        sleepEnd: (body: Body) => void;
-    }
+    methods: BodyOpt['methods'];
 
     // 渲染函数
     render: Function;
@@ -158,6 +148,7 @@ export class Body {
 
     constructor(opt: BodyOpt, type: number) {
         this.id = Util.id();
+        this.stringId = this.id.toString();
         this.type = type;
         this.engine = null;
         this.data = null;
@@ -177,14 +168,15 @@ export class Body {
         this.friction = 0.4;
         this.restitution = 0.9;
         this.constraint = null;
-        this.fixed = false;
+        this.static = false;
+        this.kinetic = false
         this.sleeping = false;
         this.sleepCounter = 0;
         this.mask = 1;
         this.parts = [];
         this.bound = null;
+        this.contactBodies = {};
 
-        this.collisionNum = 0;
         this.methods = {
             filter: (maskA: number, maskB: number) => { return true; },
             beforeAppend: (body: Body) => {},
@@ -192,12 +184,11 @@ export class Body {
             beforeRemove: (body: Body) => {},
             afterRemove: (body: Body) => {},
             sleepStart: (body: Body) => {},
-            sleepEnd: (body: Body) => {}
+            sleepEnd: (body: Body) => {},
+            onCollide: (body: Body) => {}
         }
 
         Util.extend(this, opt);
-
-        if(this.fixed) this.sleeping = true;
 
         this.init(opt);
         this.area = this.getArea();
@@ -206,7 +197,7 @@ export class Body {
         this.position = this.getCentroid();
         this.inertia = this.getInertia();
         this.invInertia = this.getInvInertia();
-        this.motion = 0;
+        this.motion = this.velocity.len() ** 2 + this.angularVelocity ** 2;
 
         // 设置渲染函数
         this.setRender(() => {});
@@ -217,18 +208,20 @@ export class Body {
      */
     init(opt: PolygonOpt) {}
 
+    // ------------------------------------------- getter---------------------------------------
+
     /**
      * 计算质量倒数
      */
     getInvMass(): number {
-        return (this.mass === 0 || this.fixed)? 0: 1 / this.mass;
+        return (this.mass === 0 || this.static || this.kinetic)? 0: 1 / this.mass;
     }
 
     /**
      * 计算转动惯量倒数
      */
     getInvInertia(): number {
-        return (this.inertia === 0 || this.fixed)? 0: 1 / this.inertia;
+        return (this.inertia === 0 || this.static || this.kinetic)? 0: 1 / this.inertia;
     }
 
     /**
@@ -261,7 +254,67 @@ export class Body {
     getInertia(): number {
         return 1;
     }
+
+    // ------------------------------------------- setter ---------------------------------------
     
+    /**
+     * 设置线速度
+     * @param x 
+     * @param y 
+     */
+    setVelocity(x: number, y: number) {
+        this.velocity.x = x;
+        this.velocity.y = y;
+    }
+
+    /**
+     * 设置角速度
+     * @param angularVelocity 
+     */
+    setAngularVelocity(angularVelocity: number) {
+        this.angularVelocity = angularVelocity;
+    }
+
+    /**
+     * 设置位置
+     * @param x 
+     * @param y 
+     */
+    setPosition(x: number, y: number) {
+        let dx = x - this.position.x,
+            dy = y - this.position.y;
+
+        this.position.x += dx;
+        this.position.y += dy;
+
+        this.translate(dx, dy);
+    }
+
+    /**
+     * 设置旋转角度
+     * @param rotation 
+     */
+    setRotation(rotation: number) {
+        this.rotation = rotation;
+        this.rotate(rotation, this.position);
+    }
+
+    /**
+     * 设置是否静态 
+     * @param static 
+     */
+    setStatic(sta: boolean) {
+        this.static = sta;
+    }
+
+    /**
+     * 设置是否运动
+     * @param kin
+     */
+    setKinetic(kin: boolean) {
+        this.kinetic = kin;
+    }
+
     /**
      * 设置用户想要携带的信息数据
      * @param data 数据
@@ -273,14 +326,6 @@ export class Body {
     }
 
     /**
-     * 设置刚体的引擎属性
-     * @param engine 
-     */
-    setEngine(engine: Engine) {
-        this.engine = engine;
-    }
-
-    /**
      * 设置渲染函数
      * @param fn 
      */
@@ -288,15 +333,17 @@ export class Body {
         if(fn && typeof fn === 'function') this.render = fn;
     }
 
+    
 
-
+    // ------------------------------------------- 内部方法 ----------------------------------------
 
     /**
      * 位移刚体
      * @override
-     * @param distance 位移向量
+     * @param dx
+     * @param dy
      */
-    translate(distance: Vector) {}
+    translate(dx: number, dy: number) {}
 
     /**
      * 旋转刚体
@@ -307,34 +354,14 @@ export class Body {
     rotate(angle: number, point: Vector) {}
 
     /**
-     * 发生碰撞
-     * @param body 
-     */
-    collide(body: Body) {
-        this.collisionNum++;
-        // 触发碰撞钩子
-        Event.emit(this, 'collide', this, body);
-    }
-
-    /**
-     * 发生分离
-     */
-    separate() {
-        this.collisionNum--;
-
-        // 触发分离钩子
-        if(this.collisionNum === 0) {
-            Event.emit(this, 'isolate', this)
-        }
-    }
-
-    /**
      * 应用冲量
      * @param impulse 冲量
      * @param offset 作用点（本地坐标系）
      * @param dt 步长
      */
     applyImpulse(impulse: Vector, offset: Vector, dt: number) {
+        if(this.static || this.kinetic || this.sleeping) return;
+
         this.velocity.x += impulse.x * this.invMass;
         this.velocity.y += impulse.y * this.invMass;
         this.angularVelocity += this.invInertia * offset.cro(impulse);
@@ -347,6 +374,8 @@ export class Body {
      * @param offset 作用点（本地坐标系）
      */
     applyForce(force: Vector, offset?: Vector) {
+        if(this.static || this.kinetic) return;
+
         this.force.x += force.x;
         this.force.y += force.y;
 
@@ -360,7 +389,7 @@ export class Body {
      * @param dt 
      */
     integrateForces(dt: number) {
-        if(this.fixed || this.sleeping) {
+        if(this.static || this.kinetic || this.sleeping) {
             return;
         }
 
@@ -375,7 +404,7 @@ export class Body {
      * @param dt 
      */
     integrateVelocities(dt: number) {
-        if(this.fixed || this.sleeping) {
+        if(this.static || this.sleeping) {
             return;
         }
 
@@ -387,11 +416,8 @@ export class Body {
         this.position.y += dy;
         this.rotation += dr;
 
-        _tempVector1.x = dx;
-        _tempVector1.y = dy;
-
         //位移刚体
-        this.translate(_tempVector1);
+        this.translate(dx, dy);
         // 旋转刚体
         if(dr !== 0) {
             this.rotate(dr, this.position);
@@ -407,5 +433,61 @@ export class Body {
         this.force.x = 0;
         this.force.y = 0;
         this.torque = 0;
+    }
+
+    /**
+     * 在每一帧结束后重置部分数据
+     */
+    reset() {
+        this.force.x = 0;
+        this.force.y = 0;
+    }
+
+    // ------------------------------------------------ hook ------------------------------
+
+    /**
+     * 绑定沟子事件
+     * @param eventName 
+     * @param fn 
+     */
+    on(eventName: string, fn: (body: Body) => void) {
+        this.methods[eventName] = fn;
+    }
+
+    beforeAppend(engine: Engine) {
+        this.engine = engine;
+
+        if(this.static) {
+            this.sleeping = true;
+            this.engine.sleeping.sleep(this);
+        }
+
+        this.methods.beforeAppend(this);
+    }
+
+    afterAppend() { this.methods.afterAppend(this); }
+
+    beforeRemove() { 
+        let sleeping = this.engine.sleeping,    
+            keys = Object.keys(this.contactBodies);
+
+        // 在删除一个刚体前，唤醒与之有碰撞的刚体
+        for(let i = 0; i < keys.length; i++) {
+            sleeping.wake(this.contactBodies[keys[i]]);
+        }
+
+        this.methods.beforeRemove(this); 
+    }
+
+    afterRemove() { this.methods.afterRemove(this); }
+
+    sleepStart() { this.methods.sleepStart(this); }
+
+    sleepEnd() { this.methods.sleepEnd(this); }
+
+    onCollide(target: Body) {
+        this.contactBodies[target.stringId] = target;
+        // 触发碰撞钩子
+        this.methods.onCollide(this);
     }
 } 

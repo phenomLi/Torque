@@ -1,6 +1,5 @@
 import { Engine, EngineOpt } from "./engine";
 import { Util } from "../common/util";
-import { Event } from "../event/eventEmitter";
 
 
 /**
@@ -11,8 +10,6 @@ export class TimeStepper {
     private engine: Engine;
     // requestAnimationFrame的id
     private raf: number;
-    // 额外的处理函数列表
-    private tickProcessorList: Function[];
     // 运行状态（开始/暂停）
     private status: boolean;
 
@@ -45,7 +42,6 @@ export class TimeStepper {
         this.engine = engine;
 
         this.status = false;
-        this.tickProcessorList = [];
 
         this.fps = opt.fps || 60;
         this.deltaFixed = opt.deltaFixed === undefined? true: opt.deltaFixed;
@@ -95,22 +91,19 @@ export class TimeStepper {
             this.frameCounter = 0;
         }
 
-        Event.emit(this.engine, 'onTickStart');
+        this.engine.tickStart();
 
         // 更新物理引擎
-        Event.emit(this.engine, 'beforeUpdate');
+        this.engine.beforeUpdate();
         this.engine.update(this.dt, timeStamp);
-        Event.emit(this.engine, 'afterUpdate');
+        this.engine.afterUpdate();
 
         // 渲染物理引擎
-        Event.emit(this.engine, 'beforeRender');
+        this.engine.beforeRender();
         this.engine.render(this.dt);
-        Event.emit(this.engine, 'afterRender');
+        this.engine.afterRender();
 
-        // 执行用户自定义函数
-        this.tickProcessorList.map(fn => fn(timeStamp));
-
-        Event.emit(this.engine, 'onTickEnd');
+        this.engine.tickEnd();
         
         this.frameTotal++;
 
@@ -121,15 +114,6 @@ export class TimeStepper {
 
         this.raf = window.requestAnimationFrame(this.tick.bind(this));
     }
-
-    /**
-     * 在一次tick中增加额外自定义的处理函数
-     * @param fn 要增加的处理函数
-     */
-    addStep(fn: (dt: number) => void) {
-        typeof fn === 'function' && this.tickProcessorList.push(fn);
-    }
-
 
     /**
      * 开始模拟
@@ -143,7 +127,7 @@ export class TimeStepper {
         }
 
         this.status = true;
-        Event.emit(this.engine, 'onStart');
+        this.engine.start();
         this.tick();
     }
 
@@ -155,7 +139,7 @@ export class TimeStepper {
 
         this.status = false;
         this.frameTotal = 0;
-        Event.emit(this.engine, 'pause');
+        this.engine.pause();
         window.cancelAnimationFrame(this.raf);
     }
 

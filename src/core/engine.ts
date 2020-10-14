@@ -7,7 +7,6 @@ import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
 import { broadPhasePair } from "../collision/broadPhase";
-import { Event } from "../event/eventEmitter";
 import { ContactConstraint } from "../constraint/contact";
 
 
@@ -38,14 +37,14 @@ export interface EngineOpt {
 
     // 方法
     methods: {
-        onTickStart: () => void; 
-        onTickEnd: () => void;
+        tickStart: () => void; 
+        tickEnd: () => void;
         beforeUpdate: () => void;
         afterUpdate: () => void;
         beforeRender: () => void;
         afterRender: () => void;
-        onStart: () => void;
-        onPause: () => void;
+        start: () => void;
+        pause: () => void;
         collisionStart: (manifolds: Manifold[]) => void;
         collisionActive: (manifolds: Manifold[]) => void;
         collisionEnd: (manifolds: Manifold[]) => void;
@@ -98,20 +97,10 @@ export class Engine {
     contactConstraint: ContactConstraint;
     // 休眠管理器
     sleeping: Sleeping;
+    // 引力缩放因子
+    gravityScaler: number = 50;
     // 方法
-    methods: {
-        onTickStart: () => void; 
-        onTickEnd: () => void;
-        beforeUpdate: () => void;
-        afterUpdate: () => void;
-        beforeRender: () => void;
-        afterRender: () => void;
-        onStart: () => void;
-        onPause: () => void;
-        collisionStart: (manifolds: Manifold[]) => void;
-        collisionActive: (manifolds: Manifold[]) => void;
-        collisionEnd: (manifolds: Manifold[]) => void;
-    }
+    methods: EngineOpt['methods'];
 
     constructor(width: number, height: number, opt?: EngineOpt) {
         this.width = width || 0;
@@ -124,14 +113,14 @@ export class Engine {
         this.enableCollisionResolve = true;
 
         this.methods = {
-            onTickStart: () => {},
-            onTickEnd: () => {},
+            tickStart: () => {},
+            tickEnd: () => {},
             beforeUpdate: () => {},
             afterUpdate: () => {},
             beforeRender: () => {},
             afterRender: () => {},
-            onStart: () => {},
-            onPause: () => {},
+            start: () => {},
+            pause: () => {},
             collisionStart: (manifolds: Manifold[]) => {},
             collisionActive: (manifolds: Manifold[]) => {},
             collisionEnd: (manifolds: Manifold[]) => {}
@@ -163,12 +152,15 @@ export class Engine {
         }
 
         for(let i = 0; i < this.bodies.length; i++) {
-            let force = this.gravity.scl(this.bodies[i].mass * 50);
+            let body = this.bodies[i];
+
+            body.force.x += this.gravity.x * body.mass * this.gravityScaler;
+            body.force.y += this.gravity.y * body.mass * this.gravityScaler;
 
             // 应用受力
-            this.bodies[i].applyForce(force);
+            body.applyForce(body.force);
             // 积分受力
-            this.bodies[i].integrateForces(dt);
+            body.integrateForces(dt);
         }
 
         // 解决所有约束
@@ -224,16 +216,12 @@ export class Engine {
         for(let i = 0; i < this.bodies.length; i++) {
             // 积分速度
             this.bodies[i].integrateVelocities(dt);
+            this.bodies[i].reset();
         }
 
-        this.manifoldTable.collisionStart.length && 
-        Event.emit(this, 'collisionStart', this.manifoldTable.collisionStart);
-
-        this.manifoldTable.collisionActive.length && 
-        Event.emit(this, 'collisionActive', this.manifoldTable.collisionActive);
-
-        this.manifoldTable.collisionEnd.length && 
-        Event.emit(this, 'collisionEnd', this.manifoldTable.collisionEnd);
+        this.manifoldTable.collisionStart.length && this.collisionStart();
+        this.manifoldTable.collisionActive.length && this.collisionActive();
+        this.manifoldTable.collisionEnd.length && this.collisionEnd();
     }
 
     /**
@@ -242,7 +230,8 @@ export class Engine {
      */
     render(dt: number) {
         for(let i = 0; i < this.bodies.length; i++) {
-            if(this.bodies[i].sleeping || this.bodies[i].fixed) {
+            // 睡眠或者静态的刚体不用每一帧都渲染
+            if(this.bodies[i].sleeping || this.bodies[i].static) {
                 continue;
             }
 
@@ -259,4 +248,28 @@ export class Engine {
         Util.merge(this, opt);
         Util.merge(this.timeStepper, opt);
     }
+
+    // ----------------------------------------------- hook --------------------------
+
+    tickStart() { this.methods.tickStart(); } 
+
+    tickEnd() { this.methods.tickEnd(); }
+
+    beforeUpdate() { this.methods.beforeUpdate(); }
+
+    afterUpdate() { this.methods.afterUpdate(); }
+
+    beforeRender() { this.methods.beforeRender(); }
+
+    afterRender() { this.methods.afterRender(); }
+
+    start() { this.methods.start(); }
+
+    pause() { this.methods.pause(); }
+
+    collisionStart() { this.methods.collisionEnd(this.manifoldTable.collisionStart); }
+
+    collisionActive() { this.methods.collisionEnd(this.manifoldTable.collisionActive); }
+
+    collisionEnd() { this.methods.collisionEnd(this.manifoldTable.collisionEnd); }
 }

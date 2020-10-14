@@ -14,7 +14,7 @@ function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, opposi
     let prev: Vector, cur: Vector, next: Vector, 
         index: number = oppositeClosestIndex,
         edge: Edge = { start: null, end: null };
-
+   
     cur = oppositeVertexList[index];
     prev = oppositeVertexList[index === 0? oppositeVertexList.length - 1: index - 1];
     next = oppositeVertexList[(index + 1) % oppositeVertexList.length];
@@ -32,7 +32,7 @@ function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, opposi
         edge.start = cur;
         edge.end = next;
     }
-
+    
     return edge;
 }
 
@@ -46,16 +46,17 @@ function clipSide(incEdge: Edge, refV: Vector, d: number): number {
     let d1 = incEdge.start.dot(refV) - d,
         d2 = incEdge.end.dot(refV) - d;
 
-    if(d1 >= 0) {
+    if(d1 > 0) {
         return 0;
     }
 
-    if(d2 >= 0) {
+    if(d2 > 0) {
         return 1;
     }
         
     return -1;
 }
+
 
 /**
  * V-Clip 算法寻找碰撞点
@@ -65,7 +66,7 @@ function clipSide(incEdge: Edge, refV: Vector, d: number): number {
  * @param normal 
  * @param depth
  */
-export function VClip(minOverlap: MinOverlap): Contact[] {
+export function vClip(minOverlap: MinOverlap): Contact[] {
     let axis = minOverlap.axis,
         normal = axis.value,
         depth: number = minOverlap.value,
@@ -86,13 +87,15 @@ export function VClip(minOverlap: MinOverlap): Contact[] {
         incVertex: Vector[] = [],
         removeIndex: number = -1;
 
-    if(d1 < 0) {
+    if(d1 <= 0) {
         incVertex[0] = incEdge.start;
     }
 
-    if(d2 < 0) {
+    if(d2 <= 0) {
         incVertex[1] = incEdge.end;
     }
+
+    
 
     // ------------------------------------- 接下来进行两边筛选 -------------------
     removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
@@ -112,6 +115,8 @@ export function VClip(minOverlap: MinOverlap): Contact[] {
     if(incVertex[1]) {
         contacts.push(new Contact(incVertex[1], depth));
     }
-
+        
     return contacts;
 }
+
+

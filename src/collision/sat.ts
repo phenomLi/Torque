@@ -6,8 +6,8 @@ import { Contact } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
-import { VClip } from "./vClip";
-import { VClosest } from "./vClosest";
+import { vClip } from "./vClip";
+import { vClosest } from "./vClosest";
 
 
 // 投影重叠类型
@@ -91,7 +91,7 @@ export class SAT {
             collision.bodyB = geometry.body;
 
             // 计算碰撞点
-            collision.contacts = this.findContacts(poly, geometry, normal, minOverlap);
+            collision.contacts = this.findContacts(geometry, minOverlap);
         }
 
         collision.collide = true;
@@ -206,15 +206,29 @@ export class SAT {
             }
         }
         else {
+            let opposite = geometry instanceof Arc? geometry: geometry.vertexList, 
+                oppositeAxes: Axis[], i;
+
             axes = [];
 
-            axes.push(...poly.axes);
+            for(i = 0; i < poly.axes.length; i++) {
+                if(poly.axes[i]) {
+                    poly.axes[i].opposite = opposite;
+                    axes.push(poly.axes[i]);
+                }
+            }
 
             if(circleAxis) {
                 axes.push(circleAxis);
             }
             else {
-                axes.push(...(<Poly>geometry).axes);
+                oppositeAxes = (<Poly>geometry).axes;
+                for(i = 0; i < oppositeAxes.length; i++) {
+                    if(oppositeAxes[i]) {
+                        oppositeAxes[i].opposite = poly.vertexList;
+                        axes.push(oppositeAxes[i]);
+                    }
+                }
             }
         }
         
@@ -227,7 +241,7 @@ export class SAT {
      * @param geometry 
      * @param axis 
      */
-    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis): {depth: number, oppositeClosestIndex: number} {
+    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis, prevOppositeClosestIndex: number): {depth: number, oppositeClosestIndex: number} {
         let axisVector: Vector = axis.value,
             partA = poly.vertexList,
             partB = geometry instanceof Poly? geometry.vertexList: geometry,
@@ -383,15 +397,18 @@ export class SAT {
 
     /**
      * 求解碰撞点
-     * @param poly 
      * @param geometry 
-     * @param normal
      * @param minOverlap
+     * @param prevContacts
      */
-    private findContacts(poly: Poly, geometry: Geometry, normal: Vector, minOverlap: MinOverlap): Contact[] {
+    private findContacts(geometry: Geometry, minOverlap: MinOverlap): Contact[] {
         if(geometry instanceof Poly) {
-            // return VClosest(poly.vertexList, geometry.vertexList, normal, minOverlap);
-            return VClip(minOverlap);
+            if(this.enableSATBoost) {
+                return vClip(minOverlap);
+            }
+            else {
+                return vClosest(minOverlap);
+            }
         }
         else {
             let vertex = geometry.centroid.loc(minOverlap.axis.value, geometry.radius - minOverlap.value / 2);

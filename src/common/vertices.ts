@@ -244,22 +244,23 @@ export const Vertices = {
     /**
      * 位移顶点
      * @param poly 多边形 
-     * @param distance 位移向量
+     * @param dx
+     * @param dy
      */
-    translate(poly: Poly, distance: Vector) {
+    translate(poly: Poly, dx: number, dy: number) {
         let v: VertexList = poly.vertexList, i;
 
         // 位移顶点
         for(i = 0; i < v.length; i++) {
-            v[i].x += distance.x;
-            v[i].y += distance.y;
+            v[i].x += dx;
+            v[i].y += dy;
         }
         
-        poly.centroid.x += distance.x;
-        poly.centroid.y += distance.y;
+        poly.centroid.x += dx;
+        poly.centroid.y += dy;
 
         // 位移包围盒
-        poly.bound.translate(distance);
+        poly.bound.translate(dx, dy);
     },
 
     /**

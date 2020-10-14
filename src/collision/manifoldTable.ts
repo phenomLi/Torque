@@ -1,6 +1,7 @@
 import { EngineOpt } from "../core/engine";
 import { Manifold, Collision } from "./manifold";
 import { Util } from "../common/util";
+import { Body } from "../body/body";
 
 
 
@@ -83,14 +84,18 @@ export class ManifoldTable {
 
                     this.collisionStart.push(manifold);
                 }
+
+                collision.bodyA.onCollide(collision.bodyB);
+                collision.bodyB.onCollide(collision.bodyA);
             }
         }
 
         // 遍历查找上一次发生碰撞且当前没有发生碰撞的流形
         for(i = 0; i < this.list.length; i++) {
             manifold = this.list[i];
+            collision = manifold.collision;
 
-            // ，将其激活状态取消
+            // 将其激活状态取消
             if(manifold.isActive && !manifold.confirmedActive) {
                 manifold.toggleActive(false, timeStamp);
                 // 标记为碰撞结束
@@ -105,10 +110,12 @@ export class ManifoldTable {
      */
     filter(timeStamp: number) {
         let manifold: Manifold,
+            collision: Collision,
             i;
 
         for(i = 0; i < this.list.length; i++) {
             manifold = this.list[i];
+            collision = manifold.collision;
 
             // 若流形的两刚体有其一处于休眠状态，更新时间，不清除
             if(manifold.bodyA.sleeping || manifold.bodyB.sleeping) {
@@ -118,7 +125,13 @@ export class ManifoldTable {
 
             // 若流形上次更新的时间离现在已经大于设定阈值，则需要清除
             if(timeStamp - manifold.timeUpdated > this.manifoldRemoveThreshold) {
+                let bodyA: Body = collision.bodyA,
+                    bodyB: Body = collision.bodyB;
+
+                delete bodyA.contactBodies[bodyB.stringId];
+                delete bodyB.contactBodies[bodyA.stringId];
                 delete this.table[manifold.id];
+
                 this.list.splice(i, 1);
                 i--;
             }

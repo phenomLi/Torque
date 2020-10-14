@@ -42,7 +42,7 @@ export class ContactConstraint {
     private biasFactor: number;
 
     constructor() {
-        this.iterations = 18;
+        this.iterations = 20;
         this.slop = 0.02;
         this.biasFactor = 0.2;
     }
@@ -130,13 +130,8 @@ export class ContactConstraint {
                     p.x = normal.x * contact.normalImpulse + tangent.x * contact.tangentImpulse;
                     p.y = normal.y * contact.normalImpulse + tangent.y * contact.tangentImpulse;
 
-                    if(!bodyA.sleeping && !bodyA.fixed) {
-                        bodyA.applyImpulse(p, contact.offsetA, dt);
-                    }
-    
-                    if(!bodyB.sleeping && !bodyB.fixed) {
-                        bodyB.applyImpulse(p.inv(p), contact.offsetB, dt); 
-                    }
+                    bodyA.applyImpulse(p, contact.offsetA, dt);
+                    bodyB.applyImpulse(p.inv(p), contact.offsetB, dt); 
                 }
             }
         }
@@ -161,8 +156,11 @@ export class ContactConstraint {
             normalImpulse,
             tangentImpulse,
             maxFriction,
-            relativeNormal,
-            relativeTangent,
+            velocityPointA, // 刚体A质心相对碰撞点的速度
+            velocityPointB, // 刚体B质心相对碰撞点的速度
+            relativeVelocity, // 相对速度
+            relativeNormalVelocity,
+            relativeTangentVelocity,
             impulse = _tempVector3,
             i, j;
 
@@ -180,15 +178,6 @@ export class ContactConstraint {
             for(j = 0; j < collision.contacts.length; j++) {
                 contact = collision.contacts[j];
 
-                let velocityPointA, // 刚体A质心相对碰撞点的速度
-                    velocityPointB, // 刚体B质心相对碰撞点的速度
-                    relativeVelocity; // 相对速度
-
-                _tempVector1.x = 0;
-                _tempVector1.y = 0;
-                _tempVector2.x = 0;
-                _tempVector2.y = 0;
-
                 contact.offsetA.croNum(bodyA.angularVelocity, _tempVector1);
                 contact.offsetB.croNum(bodyB.angularVelocity, _tempVector2);
                 velocityPointA = bodyA.velocity.add(_tempVector1, _tempVector1);
@@ -196,28 +185,22 @@ export class ContactConstraint {
                 relativeVelocity = velocityPointB.sub(velocityPointA, _tempVector1);
 
                 // 计算法向相对速度
-                relativeNormal = normal.dot(relativeVelocity);
+                relativeNormalVelocity = normal.dot(relativeVelocity);
                 // 计算法向冲量
-                normalImpulse = manifold.restitution * (relativeNormal + contact.bias) * contact.shareNormal;
+                normalImpulse = manifold.restitution * (relativeNormalVelocity + contact.bias) * contact.shareNormal;
 
                 // sequential impulse方法，收敛法向冲量
                 let oldNormalImpulse = contact.normalImpulse;
-                contact.normalImpulse += normalImpulse;
-                contact.normalImpulse = Math.max(contact.normalImpulse, 0);
+                contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
                 normalImpulse = contact.normalImpulse - oldNormalImpulse;
 
                 // 应用冲量
                 impulse.x = normal.x * normalImpulse;
                 impulse.y = normal.y * normalImpulse;
 
-                if(!bodyA.sleeping && !bodyA.fixed) {
-                    bodyA.applyImpulse(impulse, contact.offsetA, dt);
-                }
-
-                if(!bodyB.sleeping && !bodyB.fixed) {
-                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
-                }
-
+                bodyA.applyImpulse(impulse, contact.offsetA, dt);
+                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
+                
                 // --------------------------------------------------------------------------------------------
 
                 contact.offsetA.croNum(bodyA.angularVelocity, _tempVector1);
@@ -227,9 +210,9 @@ export class ContactConstraint {
                 relativeVelocity = velocityPointB.sub(velocityPointA, _tempVector1);
 
                 // 计算切向相对速度
-                relativeTangent = tangent.dot(relativeVelocity);
+                relativeTangentVelocity = tangent.dot(relativeVelocity);
                 // 计算切向冲量
-                tangentImpulse = relativeTangent * contact.shareTangent;
+                tangentImpulse = relativeTangentVelocity * contact.shareTangent;
                 // 计算最大摩擦力
                 maxFriction = manifold.friction * contact.normalImpulse;
 
@@ -242,13 +225,8 @@ export class ContactConstraint {
                 impulse.x = tangent.x * tangentImpulse;
                 impulse.y = tangent.y * tangentImpulse;
 
-                if(!bodyA.sleeping && !bodyA.fixed) {
-                    bodyA.applyImpulse(impulse, contact.offsetA, dt);
-                }
-
-                if(!bodyB.sleeping && !bodyB.fixed) {
-                    bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
-                }
+                bodyA.applyImpulse(impulse, contact.offsetA, dt);
+                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
             }
         }
     }

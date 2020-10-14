@@ -45,12 +45,12 @@ export class Circle extends Body {
         return Arcs.create(this);
     }
 
-    translate(distance: Vector) {
+    translate(dx: number, dy: number) {
         // 位移图形原点
-        this.origin.x += distance.x;
-        this.origin.y += distance.y;
+        this.origin.x += dx;
+        this.origin.y += dy;
 
         // 位移圆形
-        Arcs.translate(this.arc, distance);
+        Arcs.translate(this.arc, dx, dy);
     }
 }

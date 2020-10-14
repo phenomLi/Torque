@@ -13,13 +13,13 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number 
     let projection: number,
         index: number;
 
-    let minProjection = Infinity;
+    let maxProjection = -Infinity;
 
     for(let i = 0; i < vertexList.length; i++) {
         projection = vertexList[i].dot(normal);
 
-        if(projection < minProjection) {
-            minProjection = projection;
+        if(projection > maxProjection) {
+            maxProjection = projection;
             index = i;
         }
     }
@@ -34,13 +34,17 @@ function findClosestVertexIndex(vertexList: VertexList, normal: Vector): number 
  * @param vertexListA 
  * @param vertexListB 
  * @param normal 
- * @param minOverlap
+ * @param depth
  */
-export function VClosest(vertexListA: VertexList, vertexListB: VertexList, normal: Vector, minOverlap: MinOverlap): Contact[] {
+export function vClosest(minOverlap: MinOverlap): Contact[] {
     let contacts: Contact[] = [],
-        normalInv = normal.inv(_tempVector3),
-        depth = minOverlap.value,
+        axis = minOverlap.axis,
+        normal = axis.value,
+        normalInv = axis.value.inv(_tempVector3),
         index: number, prev: number, next: number,
+        depth: number = minOverlap.value,
+        vertexListA = axis.origin,
+        vertexListB = axis.opposite as VertexList,
         testVertices: Vector[] = [],
         i;
 

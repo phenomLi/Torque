@@ -36,13 +36,14 @@ export class Bound {
 
     /**
      * 位移包围盒
-     * @param distance
+     * @param dx
+     * @param dy
      */
-    translate(distance: Vector) {
-        this.min.x += distance.x;
-        this.min.y += distance.y;
-        this.max.x += distance.x;
-        this.max.y += distance.y;
+    translate(dx: number, dy: number) {
+        this.min.x += dx;
+        this.min.y += dy;
+        this.max.x += dx;
+        this.max.y += dy;
     }
 
     /**

@@ -96,13 +96,14 @@ export const Arcs = {
     /**
      * 位移圆形
      * @param arc
-     * @param distance 位移向量
+     * @param dx
+     * @param dy
      */
-    translate(arc: Arc, distance: Vector) {
-        arc.centroid.x += distance.x;
-        arc.centroid.y += distance.y;
+    translate(arc: Arc, dx: number, dy: number) {
+        arc.centroid.x += dx;
+        arc.centroid.y += dy;
 
         // 位移包围盒
-        arc.bound.translate(distance);
+        arc.bound.translate(dx, dy);
     }
 };

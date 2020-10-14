@@ -1,7 +1,6 @@
 import { Body } from "../body/body";
 import { EngineOpt } from "./engine";
 import { Util } from "../common/util";
-import { Event } from "../event/eventEmitter";
 import { Manifold } from "../collision/manifold";
 
 
@@ -33,6 +32,8 @@ export class Sleeping {
      * @param body 
      */
     sleep(body: Body) {
+        if(body.kinetic) return;
+
         body.sleeping = true;
         body.sleepCounter = this.sleepThreshold;
 
@@ -41,7 +42,7 @@ export class Sleeping {
         body.angularVelocity = 0;
         body.motion = 0;
 
-        Event.emit(body, 'sleepStart', body);
+        body.sleepStart();
     }
 
     /**
@@ -51,7 +52,8 @@ export class Sleeping {
     wake(body: Body) {
         body.sleeping = false;
         body.sleepCounter = 0;
-        Event.emit(body, 'sleepEnd', body);
+
+        body.sleepEnd();
     }
 
     /**
@@ -64,8 +66,6 @@ export class Sleeping {
 
         for(i = 0; i < bodies.length; i++) {
             body = bodies[i];
-
-            if(body.fixed) continue;
 
             let motion = body.motion;
 
@@ -110,13 +110,13 @@ export class Sleeping {
             bodyB = manifold.bodyB;
             
             // 若A为休眠状态且B的动量大于休眠阈值，唤醒A
-            if(!bodyA.fixed && bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
+            if(!bodyA.static && bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
                 this.wake(bodyA);
                 continue;
             }
 
             // B同理上面
-            if(!bodyB.fixed && bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
+            if(!bodyB.static && bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
                 this.wake(bodyB);
                 continue;
             }

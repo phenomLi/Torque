@@ -5,11 +5,31 @@ const canvas = document.getElementById('canvas'),
 
     
 const creator = new Creator(canvas, canvasWidth, canvasHeight, {
-    gravity: Creator.v(0, 11),
+    gravity: Creator.v(0, 9),
     enableSleeping: true,
     enableCache: true,
     enableSATBoost: true
 });
+
+const options = {
+    mass: 100,
+    friction: 0.3,
+    fill: 'transparent',
+    // textFill: '#333',
+    stroke: '#333',
+    methods: {
+        sleepStart(body) {
+            body.data.attr('style', {
+                opacity: 0.5
+            });
+        },
+        sleepEnd(body) {
+            body.data.attr('style', {
+                opacity: 1
+            });
+        }
+    }
+};
 
 
 function getRandom(number, min = 0) {
@@ -45,6 +65,7 @@ function createWall(cWidth, cHeight, wallWidth, opt) {
     });
 }
 
+
 function createStack(row, col, x, w) {
     for(let i = 0; i < row; i++) {
         for(let j = 0; j < col; j++) {
@@ -56,46 +77,11 @@ function createStack(row, col, x, w) {
     }
 }
 
-
-
 createWall(canvasWidth, canvasHeight, 30, {
-    fixed: true,
-    friction: 0.3,
-    fill: null,
-    stroke: '#333'
+    ...options,
+    static: true
 });
 
-
-const options = {
-    mass: 100,
-    friction: 0.3,
-    // textFill: null,
-    stroke: '#333',
-    methods: {
-        sleepStart(body) {
-            body.data.attr('style', {
-                opacity: 0.5
-            });
-        },
-        sleepEnd(body) {
-            body.data.attr('style', {
-                opacity: 1
-            });
-        }
-    }
-};
-
-creator.polygon(600, 250, [
-    [0, 0], [20, 0], [20, 100], 
-    [70, 150], [170, 150], [210, 100], [210, 0],
-    [230, 0], [230, 100], [170, 170], 
-    [70, 170], [0, 100], 
-], {
-    fixed: true,
-    fill: '#778beb',
-    rotation: Math.PI,
-    ...options
-});
 
 creator.polygon(300, 250, [
     [0, 0], [20, 0], [20, 100], 
@@ -103,24 +89,24 @@ creator.polygon(300, 250, [
     [230, 0], [230, 100], [170, 170], 
     [70, 170], [0, 100], 
 ], {
-    fixed: true,
-    fill: '#778beb',
+    static: true,
     ...options
 });
 
-createStack(5, 5, 100, 30);
+createStack(4, 4, 100, 30);
 
 
 canvas.addEventListener('click', e => {
     let x = e.offsetX, y = e.offsetY;
 
-    creator.rect(x, y, getRandom(50, 10), getRandom(50, 10), {
-        fill: '#f38181',
+    creator.circle(x, y, 14, {
+        fill: '#fce38a',
+        velocity: Creator.v(5, 0),
         ...options
     });
 
-    creator.circle(x, y, 14, {
-        fill: '#fce38a',
+    creator.rect(x, y, getRandom(50, 10), getRandom(50, 10), {
+        fill: '#f38181',
         ...options
     });
 
@@ -128,6 +114,26 @@ canvas.addEventListener('click', e => {
         fill: '#778beb',
         ...options
     });
+});
+
+
+let rect = creator.rect(700, 200, 80, 30, {
+    fill: '#f38181',
+    kinetic: true,
+    ...options
+});
+
+let counter = 0;
+creator.t.on('beforeUpdate', () => {
+    counter += 0.014;
+
+    if (counter < 0) {
+        return;
+    }
+
+    let px = 700 + 300 * Math.sin(counter);
+
+    rect.setVelocity(px - rect.position.x, 0);
 });
 
 creator.t.start();

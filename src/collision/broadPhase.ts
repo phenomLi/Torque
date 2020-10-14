@@ -53,7 +53,7 @@ export class BroadPhase {
         if(this.isBodyOutWindow(bodyA.bound) || this.isBodyOutWindow(bodyB.bound)) return false;
 
         // 两个静态刚体 ，跳过
-        if(bodyA.fixed && bodyB.fixed) return false;
+        if((bodyA.static || bodyA.kinetic) && (bodyB.static || bodyB.kinetic)) return false;
 
         // 两个睡眠刚体，跳过
         if(bodyA.sleeping && bodyB.sleeping) return false;

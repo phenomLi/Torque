@@ -28,12 +28,13 @@
 <div id="canvas"></div>
 
 <button id="status">暂停</button>
+<button id="del">删除刚体</button>
 <div id="mouse_pos" style="display: inline-block;"></div>
 <div style="display: inline-block;">FPS: <span id="fps"></span></div>
 
-<script src="./demo/lib/zrender.min.js"></script>
+<script src="./lib/zrender.min.js"></script>
 <script src="./dist/torque.js"></script>
-<script src="./demo/creator.js"></script>
+<script src="./lib/creator.js"></script>
 <script src="./demo/demo.js"></script>
 <script>
 
@@ -60,11 +61,16 @@ status.addEventListener('click', () => {
     }
 });
 
-
-creator.t.step(() => {
-    fps.innerText = creator.t.getFPS().toFixed(1);
+del.addEventListener('click', () => {
+    if(creator.selectedShape) {
+        creator.remove(creator.selectedShape);
+        creator.selectedShape = null;
+    }
 });
 
+creator.t.on('tickEnd', () => {
+    fps.innerText = creator.t.getFPS().toFixed(1);
+});
 
 </script>
 </body>

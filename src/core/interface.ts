@@ -1,10 +1,6 @@
 import { Body } from "../body/body";
 import { Util } from "../common/util";
 import { Engine, EngineOpt } from "./engine";
-import { Event } from "../event/eventEmitter";
-
-
-
 
 
 
@@ -25,10 +21,9 @@ export class TorqueWorld {
             body.map(b => this.append(b));
         }
         else {
-            Event.emit(body, 'beforeAppend', body);
-            body.setEngine(this.engine);
+            body.beforeAppend(this.engine);
             this.engine.bodies.push(body);
-            Event.emit(body, 'afterAppend', body);
+            body.afterAppend();
         }
     }
     /**
@@ -36,9 +31,9 @@ export class TorqueWorld {
      * @param body 
      */
     remove(body: Body) {
-        Event.emit(body, 'beforeRemove', body);
+        body.beforeRemove();
         Util.remove(this.engine.bodies, body);
-        Event.emit(body, 'afterRemove', body);
+        body.afterRemove();
     }
 
     /**
@@ -66,11 +61,12 @@ export class TorqueWorld {
     }
 
     /**
-     * 添加时间步函数
+     * 绑定沟子事件
+     * @param eventName 
      * @param fn 
      */
-    step(fn: (dt: number) => void) {
-        this.engine.timeStepper.addStep(fn);
+    on(eventName: string, fn: (engine: Engine) => void) {
+        this.engine.methods[eventName] = fn;
     }
 
     /**

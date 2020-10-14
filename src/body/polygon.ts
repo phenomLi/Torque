@@ -63,21 +63,21 @@ export class Polygon extends Body {
         return Vertices.getInertia(this.vertexList, this.mass, this.position);
     }
 
-    translate(distance: Vector) {
+    translate(dx: number, dy: number) {
         // 位移图形原点
-        this.origin.x += distance.x;
-        this.origin.y += distance.y;
+        this.origin.x += dx;
+        this.origin.y += dy;
         // 位移多边形顶点
-        Vertices.translate(this.poly, distance);
+        Vertices.translate(this.poly, dx, dy);
 
         // 若多边形是凹多边形, 位移子多边形包围盒
         if(this.isConcave) {
             for(let i = 0; i < this.parts.length; i++) {
                 let part: Poly = this.parts[i];
 
-                part.centroid.x += distance.x;
-                part.centroid.y += distance.y;
-                part.bound.translate(distance);
+                part.centroid.x += dx;
+                part.centroid.y += dy;
+                part.bound.translate(dx, dy);
             }
         }
     }
