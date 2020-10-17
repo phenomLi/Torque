@@ -51,9 +51,9 @@ zr.add(rectShape);
 - 休眠/唤醒技术
 - Warm Start
 - Sequential Impulses
-- 基于NFSP-SAT的碰撞缓存/复用技术
+- 基于SATBoost的碰撞缓存/复用技术
 - 碰撞过滤
-- 基于NFSP-SAT的V-clip碰撞点求解方法
+- 基于SATBoost的V-clip碰撞点求解方法
 - 动态 dt
 - 凹多边形
 - 复合刚体
@@ -69,6 +69,6 @@ SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信图片_20200913174835.png)
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信截图_20200913175522.png)
 
-SATBoost主要针对SAT进行改进，但同时，NFSP-SAT也优化了碰撞复用和碰撞点求解的性能。
+SATBoost主要针对SAT进行改进，但同时，SATBoost也优化了碰撞复用和碰撞点求解的性能。
 ## A.D.
 想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
