@@ -3,6 +3,9 @@ import { Polygon, PolygonOpt } from "../body/polygon";
 import { Rect, RectOpt } from "../body/rect";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
+import { Composite, CompositeOpt } from "../body/composite";
+import { Body } from "../body/body";
+import { Vertices } from "../common/vertices";
 
 
 
@@ -33,17 +36,39 @@ export class BodiesFactory {
      * @param v 顶点集 
      * @param opt 配置项
      */
-    Polygon(x: number, y: number, v: Array<number[]>, opt?: PolygonOpt): Polygon {
-        opt = opt || <PolygonOpt>{};
+    Polygon(x: number, y: number, v: Array<number[]>, opt?: PolygonOpt & CompositeOpt): Polygon | Composite {
+        let vertices = v.map(vertex => new Vector(vertex[0], vertex[1])),
+            options = opt || <PolygonOpt & CompositeOpt>{ origin: new Vector(x, y) };
 
-        let vertices = v.map(vertex => new Vector(vertex[0], vertex[1]));
+        // 若输入的顶点列表是凹多边形，则将其拆分为由凸多边形组合成的组合图形
+        if(Vertices.isConcave(vertices)) {
+            let vertexLists = Vertices.split(vertices),
+                polygons: Polygon[] = [],
+                composite: Composite;
 
-        Util.extend(opt, {
-            origin: new Vector(x, y),
-            vertices
-        });
+            for(let i = 0; i < vertexLists.length; i++) {
+                polygons.push(new Polygon({
+                    origin: new Vector(x, y),
+                    vertices: Vertices.filterCollinearVertex(vertexLists[i])
+                }));
+            }
 
-        return new Polygon(opt);
+            composite = new Composite({
+                ...options,
+                bodies: polygons,
+                useParentProps: true
+            });
+
+            return composite;
+        }
+        else {
+            Util.extend(options, {
+                origin: new Vector(x, y),
+                vertices
+            });
+    
+            return new Polygon(options);
+        }
     }
 
     /**
@@ -64,5 +89,15 @@ export class BodiesFactory {
         });
 
         return new Rect(opt);
+    }
+
+    /**
+     * 创造复合图形
+     * @param bodies 
+     */
+    Composite(bodies: Body[], opt?: CompositeOpt): Composite {
+        opt = opt || <CompositeOpt>{};
+        opt.bodies = bodies;
+        return new Composite(opt);
     }
 }

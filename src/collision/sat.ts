@@ -1,13 +1,16 @@
 import { Vector, _tempVector1, _tempVector4 } from "../math/vector";
-import { Axis, Poly, Vertices } from "../common/vertices";
-import { Arcs, Arc } from "../common/arcs";
-import { Collision, Geometry } from "./manifold";
+import { Axis, Vertices } from "../common/vertices";
+import { Arcs } from "../common/arcs";
+import { Collision } from "./manifold";
 import { Contact } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
 import { vClip } from "./vClip";
 import { vClosest } from "./vClosest";
+import { Polygon } from "../body/polygon";
+import { Circle } from "../body/circle";
+import { Body, bodyType } from "../body/body";
 
 
 // 投影重叠类型
@@ -26,6 +29,7 @@ export type MinOverlap = {
 export class SAT {
     // 是否开启SAT加速
     private enableSATBoost: boolean = true;
+    private reuseCollisionThreshold: number = 0.05;
 
     constructor(opt: EngineOpt) {
         Util.merge(this, opt);
@@ -37,7 +41,7 @@ export class SAT {
      * @param geometry 
      * @param prevCollision
      */
-    polygonCollideBody(poly: Poly, geometry: Geometry, prevCollision: Collision): Collision {
+    polygonCollideBody(poly: Polygon, geometry: Body, prevCollision: Collision): Collision {
         let canReuse: boolean = this.canReuseCollision(poly, geometry, prevCollision),
             collision: Collision = null,
             minOverlap: MinOverlap,
@@ -87,8 +91,8 @@ export class SAT {
 
             collision.partA = poly;
             collision.partB = geometry;
-            collision.bodyA = poly.body;
-            collision.bodyB = geometry.body;
+            collision.bodyA = poly.parent || poly;
+            collision.bodyB = geometry.parent || geometry;
 
             // 计算碰撞点
             collision.contacts = this.findContacts(geometry, minOverlap);
@@ -105,9 +109,9 @@ export class SAT {
      * @param circleB 
      * @param prevCollision
      */
-    circleCollideCircle(arcA: Arc, arcB: Arc, prevCollision: Collision): Collision {
-        let axis: Vector = arcA.centroid.sub(arcB.centroid, _tempVector1),
-            overlaps: number = (arcA.radius + arcB.radius) - axis.len(),
+    circleCollideCircle(circleA: Circle, circleB: Circle, prevCollision: Collision): Collision {
+        let axis: Vector = circleA.position.sub(circleB.position, _tempVector1),
+            overlaps: number = (circleA.radius + circleB.radius) - axis.len(),
             collision: Collision = new Collision(),
             normal: Vector;
 
@@ -117,18 +121,18 @@ export class SAT {
             return collision;
         }
 
-        normal = this.reviseNormal(axis, arcA, arcB).nol();
+        normal = this.reviseNormal(axis, circleA, circleB).nol();
 
         collision.axis = null;
-        collision.partA = arcA;
-        collision.partB = arcB;
-        collision.bodyA = arcA.body;
-        collision.bodyB = arcB.body;
+        collision.partA = circleA;
+        collision.partB = circleB;
+        collision.bodyA = circleA.parent || circleA;
+        collision.bodyB = circleB.parent || circleB;
 
         collision.normal = normal;
         collision.tangent = normal.nor();
 
-        let position = arcA.centroid.loc(normal.inv(_tempVector1), arcA.radius - overlaps / 2);
+        let position = circleA.position.loc(normal.inv(_tempVector1), circleA.radius - overlaps / 2);
 
         collision.contacts = [new Contact(position, overlaps)];
         collision.collide = true;
@@ -149,7 +153,7 @@ export class SAT {
      * @param axes 
      * @param prevOppositeClosestIndex
      */
-    private detect(poly: Poly, geometry: Geometry, axes: Axis[], prevOppositeClosestIndex?: number): MinOverlap {
+    private detect(poly: Polygon, geometry: Body, axes: Axis[], prevOppositeClosestIndex?: number): MinOverlap {
         let minOverlap: number = Infinity,
             oppositeClosestIndex: number,
             getOverlaps = this.enableSATBoost? this.selectiveProjectionMethod: this.fullProjectionMethod,
@@ -188,13 +192,13 @@ export class SAT {
      * @param poly 
      * @param geometry 
      */
-    private getTestAxes(poly: Poly, geometry: Geometry): Axis[] {
+    private getTestAxes(poly: Polygon, geometry: Body): Axis[] {
         let axes: Axis[],
             circleAxis: Axis;
 
         // 若geometry是圆形，计算一条动态轴
-        if(geometry instanceof Arc) {
-            circleAxis = Arcs.getAxes(<Arc>geometry, poly);
+        if(geometry.type === bodyType.circle) {
+            circleAxis = Arcs.getAxes(<Circle>geometry, poly);
         }
 
         // 如果开启了加速功能，首先进行轴过滤
@@ -206,7 +210,7 @@ export class SAT {
             }
         }
         else {
-            let opposite = geometry instanceof Arc? geometry: geometry.vertexList, 
+            let opposite = geometry.type === bodyType.circle? <Circle>geometry: (<Polygon>geometry).vertexList, 
                 oppositeAxes: Axis[], i;
 
             axes = [];
@@ -222,7 +226,7 @@ export class SAT {
                 axes.push(circleAxis);
             }
             else {
-                oppositeAxes = (<Poly>geometry).axes;
+                oppositeAxes = (<Polygon>geometry).axes;
                 for(i = 0; i < oppositeAxes.length; i++) {
                     if(oppositeAxes[i]) {
                         oppositeAxes[i].opposite = poly.vertexList;
@@ -241,10 +245,10 @@ export class SAT {
      * @param geometry 
      * @param axis 
      */
-    private fullProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis, prevOppositeClosestIndex: number): {depth: number, oppositeClosestIndex: number} {
+    private fullProjectionMethod(poly: Polygon, geometry: Body, axis: Axis, prevOppositeClosestIndex: number): {depth: number, oppositeClosestIndex: number} {
         let axisVector: Vector = axis.value,
             partA = poly.vertexList,
-            partB = geometry instanceof Poly? geometry.vertexList: geometry,
+            partB = geometry.type === bodyType.polygon? (<Polygon>geometry).vertexList: <Circle>geometry,
             projection1,
             projection2;
 
@@ -272,14 +276,14 @@ export class SAT {
      * @param axis 
      * @param oppositeClosestIndex
      */
-    private selectiveProjectionMethod(poly: Poly, geometry: Geometry, axis: Axis, oppositeClosestIndex?: number): {depth: number, oppositeClosestIndex: number} {
+    private selectiveProjectionMethod(poly: Polygon, geometry: Body, axis: Axis, oppositeClosestIndex?: number): {depth: number, oppositeClosestIndex: number} {
         let axisVector: Vector = axis.value,
             opposite = axis.opposite;
             
         // 该轴是圆形和多边形的动态轴
         if(opposite === null) {
             let projection1 = Vertices.projection(poly.vertexList, axisVector),
-                projection2 = Arcs.projection(<Arc>geometry, axisVector);
+                projection2 = Arcs.projection(<Circle>geometry, axisVector);
 
             return {
                 depth: Math.min(projection1.max - projection2.min, projection2.max - projection1.min),
@@ -291,7 +295,7 @@ export class SAT {
             supportProjection: number = supportVertex.dot(axisVector);
 
         // 对面是圆形
-        if(opposite instanceof Arc) {
+        if(opposite instanceof Circle) {
             let circleProjection = Arcs.projection(opposite, axisVector);
             return {
                 depth: supportProjection - circleProjection.min,
@@ -366,8 +370,8 @@ export class SAT {
      * @param bodyA 刚体A
      * @param bodyB 刚体B
      */
-    private reviseNormal(normal: Vector, geometryA: Geometry, geometryB: Geometry): Vector {
-        if (normal.dot(geometryB.centroid.sub(geometryA.centroid, _tempVector1)) > 0) {
+    private reviseNormal(normal: Vector, bodyA: Body, bodyB: Body): Vector {
+        if (normal.dot(bodyB.position.sub(bodyA.position, _tempVector1)) > 0) {
             return normal.inv();
         } 
 
@@ -376,19 +380,19 @@ export class SAT {
 
     /**
      * 查看碰撞缓存是否可以复用
-     * @param geometryA
-     * @param geometryB
+     * @param bodyA
+     * @param bodyB
      * @param prevCollision 上一次的碰撞
      */
-    private canReuseCollision(geometryA: Geometry, geometryB: Geometry, prevCollision: Collision): boolean {
+    private canReuseCollision(bodyA: Body, bodyB: Body, prevCollision: Collision): boolean {
         // 若上次碰撞的缓存存在
         if(prevCollision) {
-            let bodyA = geometryA.body,
-                bodyB = geometryB.body,
-                motion = Math.sqrt(bodyA.motion + bodyB.motion);
+            let parentA = bodyA.parent || bodyA,
+                parentB = bodyB.parent || bodyB,
+                motion = Math.sqrt(parentA.motion + parentB.motion);
 
             // 若上次碰撞判定为真，且当前碰撞对刚体趋于静止，可复用
-            return prevCollision.collide && motion < 0.05;
+            return prevCollision.collide && motion < this.reuseCollisionThreshold;
         }
         
         // 碰撞缓存不存在，直接判定无法复用
@@ -401,8 +405,8 @@ export class SAT {
      * @param minOverlap
      * @param prevContacts
      */
-    private findContacts(geometry: Geometry, minOverlap: MinOverlap): Contact[] {
-        if(geometry instanceof Poly) {
+    private findContacts(geometry: Body, minOverlap: MinOverlap): Contact[] {
+        if(geometry.type === bodyType.polygon) {
             if(this.enableSATBoost) {
                 return vClip(minOverlap);
             }
@@ -411,7 +415,7 @@ export class SAT {
             }
         }
         else {
-            let vertex = geometry.centroid.loc(minOverlap.axis.value, geometry.radius - minOverlap.value / 2);
+            let vertex = geometry.position.loc(minOverlap.axis.value, (<Circle>geometry).radius - minOverlap.value / 2);
             return [new Contact(vertex, minOverlap.value)];
         }
     }

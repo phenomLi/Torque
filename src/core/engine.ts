@@ -2,11 +2,10 @@ import { Body } from "../body/body";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
 import { TimeStepper } from "./timeStepper";
-import { Detector } from "../collision/detector";
+import { broadPhasePair, Detector } from "../collision/detector";
 import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
-import { broadPhasePair } from "../collision/broadPhase";
 import { ContactConstraint } from "../constraint/contact";
 
 
@@ -52,24 +51,11 @@ export interface EngineOpt {
 }
 
 
-let TimeList = [],
-    TestFlag = false;
 
-let test = document.getElementById('test');
-
-if(test) {
-    test.addEventListener('click', () => {
-        TestFlag = true;
-    });
-}
 
 
 // 主引擎
 export class Engine {
-
-    testFlag: boolean = false;
-    timeList: number[] = [];
-
     // 模拟窗口宽度
     width: number;
     // 模拟窗口高度
@@ -101,6 +87,8 @@ export class Engine {
     gravityScaler: number = 50;
     // 方法
     methods: EngineOpt['methods'];
+
+    collision;
 
     constructor(width: number, height: number, opt?: EngineOpt) {
         this.width = width || 0;
@@ -143,9 +131,6 @@ export class Engine {
      * @param timeStamp 时间戳
      */
     update(dt: number, timeStamp: number) {
-        let broadPhasePair: broadPhasePair[] = [],
-            collisions: Collision[] = [];
-
         if(this.enableSleeping) {
             // 更新刚体的休眠/唤醒状态
             this.sleeping.update(this.bodies);
@@ -168,36 +153,12 @@ export class Engine {
 
         // 是否开启碰撞检测
         if(this.enableCollisionDetection) {
+            // 进行碰撞检测
+            let collisions: Collision[] = this.detector.detect(this.bodies);
             
-            // 粗阶段检测
-            broadPhasePair = this.detector.broadPhase.detect(this.bodies);
+            this.collision = collisions;
 
-            let start = performance.now();
-
-            // 细阶段检测
-            collisions = this.detector.narrowPhase.detect(broadPhasePair);
-
-            let end = performance.now(),
-                range = 60;
-
-            if(TestFlag) {
-                if(TimeList.length < range) {
-                    TimeList.push(end - start);
-                }
-                else {
-                    let total = TimeList.reduce((t, cur) => {
-                        return t + cur;
-                    });
-    
-                    console.log(total / range);
-
-                    TestFlag = false;
-                    TimeList.length = 0;
-                }
-            }
-
-            // console.log(collisions);
-            
+            //根据得到的碰撞对更新碰撞流形
             this.manifoldTable.update(collisions, timeStamp);
             // 移除缓存表超时的碰撞对
             this.manifoldTable.filter(timeStamp);
@@ -216,7 +177,6 @@ export class Engine {
         for(let i = 0; i < this.bodies.length; i++) {
             // 积分速度
             this.bodies[i].integrateVelocities(dt);
-            this.bodies[i].reset();
         }
 
         this.manifoldTable.collisionStart.length && this.collisionStart();
@@ -229,14 +189,23 @@ export class Engine {
      * @param dt 
      */
     render(dt: number) {
+        let body: Body, i, j;
+            
         for(let i = 0; i < this.bodies.length; i++) {
+            body = this.bodies[i];
+
             // 睡眠或者静态的刚体不用每一帧都渲染
-            if(this.bodies[i].sleeping || this.bodies[i].static) {
+            if(body.sleeping || body.static) {
                 continue;
             }
 
             // 渲染刚体
-            this.bodies[i].render(this.bodies[i], dt);
+            body.render(body, dt);
+            if(body.parts[0] !== body) {
+                for(j = 0; j < body.parts.length; j++) {
+                    body.parts[j].render(body.parts[j], dt);
+                }
+            }
         }
     }
 

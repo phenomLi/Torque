@@ -1,7 +1,7 @@
 import { Body, BodyOpt, bodyType } from "./body";
 import { Vector } from "../math/vector";
-import { Bound } from "../collision/bound";
-import { Arc, Arcs } from "../common/arcs";
+import { Arcs } from "../common/arcs";
+import { Bound } from "../common/bound";
 
 /**
  * 圆形刚体
@@ -16,14 +16,9 @@ export interface CircleOpt extends BodyOpt {
 export class Circle extends Body {
     // 半径
     radius: number;
-    arc: Arc;
 
     constructor(opt: CircleOpt) {
         super(opt, bodyType.circle);
-
-        this.arc = this.getArc();
-        this.parts = [this.arc];
-        this.bound = this.arc.bound;
     }
 
     getArea(): number {
@@ -34,15 +29,12 @@ export class Circle extends Body {
         return this.origin.col();
     }
 
-    getInertia(): number {
+    getInertia(position?: Vector): number {
         return 0.5 * this.mass * Math.pow(this.radius, 2);
     }
 
-    /**
-     * 获取圆形信息包
-     */
-    getArc(): Arc {
-        return Arcs.create(this);
+    getBound(): Bound {
+        return Arcs.getBound(this.position, this.radius);
     }
 
     translate(dx: number, dy: number) {
@@ -50,7 +42,17 @@ export class Circle extends Body {
         this.origin.x += dx;
         this.origin.y += dy;
 
-        // 位移圆形
-        Arcs.translate(this.arc, dx, dy);
+        // 位移包围盒
+        this.bound.translate(dx, dy);
+    }
+
+    rotate(radian: number, point: Vector) {
+        if(point === this.position) return;
+
+        let ox = this.origin.x,
+            oy = this.origin.y;
+
+        this.origin = this.origin.rot(radian, point, this.origin);
+        this.bound.translate(this.origin.x - ox, this.origin.y - oy);
     }
 }

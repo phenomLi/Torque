@@ -10,8 +10,8 @@ import { Manifold } from "../collision/manifold";
 
 export class Sleeping {
 
-    // 判定休眠帧树阈值
-    sleepThreshold: number;
+    // 判定休眠的时间阈值
+    sleepDelayThreshold: number;
     // 判定休眠动量阈值
     sleepMotionThreshold: number;
     // 判定唤醒动量阈值
@@ -20,9 +20,9 @@ export class Sleeping {
     minBias: number;
 
     constructor(opt: EngineOpt) {
-        this.sleepThreshold = 60;
-        this.sleepMotionThreshold = 0.0007;
-        this.wakeMotionThreshold = 0.8;
+        this.sleepDelayThreshold = 60;
+        this.sleepMotionThreshold = 0.0008;
+        this.wakeMotionThreshold = 0.7;
 
         Util.merge(this, opt);
     }
@@ -35,7 +35,7 @@ export class Sleeping {
         if(body.kinetic) return;
 
         body.sleeping = true;
-        body.sleepCounter = this.sleepThreshold;
+        body.sleepCounter = this.sleepDelayThreshold;
 
         body.velocity.x = 0;
         body.velocity.y = 0;
@@ -43,6 +43,12 @@ export class Sleeping {
         body.motion = 0;
 
         body.sleepStart();
+
+        if(body.parts[0] !== body) {
+            for(let i = 0; i < body.parts.length; i++) {
+                this.sleep(body.parts[i]);
+            }
+        }
     }
 
     /**
@@ -54,6 +60,12 @@ export class Sleeping {
         body.sleepCounter = 0;
 
         body.sleepEnd();
+
+        if(body.parts[0] !== body) {
+            for(let i = 0; i < body.parts.length; i++) {
+                this.wake(body.parts[i]);
+            }
+        }
     }
 
     /**
@@ -83,7 +95,7 @@ export class Sleeping {
                 body.sleepCounter += 1;
 
                 // 若刚体休眠计数器达到休眠阈值，则进行休眠
-                if (body.sleepCounter >= this.sleepThreshold) {
+                if (body.sleepCounter >= this.sleepDelayThreshold) {
                     this.sleep(body);
                 }
             } 
@@ -108,15 +120,15 @@ export class Sleeping {
             manifold = manifolds[i];
             bodyA = manifold.bodyA;
             bodyB = manifold.bodyB;
-            
+
             // 若A为休眠状态且B的动量大于休眠阈值，唤醒A
-            if(!bodyA.static && bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
+            if(bodyB.kinetic || !bodyA.static && bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
                 this.wake(bodyA);
                 continue;
             }
 
             // B同理上面
-            if(!bodyB.static && bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
+            if(bodyA.kinetic || !bodyB.static && bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
                 this.wake(bodyB);
                 continue;
             }

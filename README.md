@@ -56,6 +56,7 @@ zr.add(rectShape);
 - 基于NFSP-SAT的V-clip碰撞点求解方法
 - 动态 dt
 - 凹多边形
+- 复合刚体
 - 静态/运动的刚体
 - 摩擦力，静摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）

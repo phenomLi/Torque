@@ -26,11 +26,16 @@ export class TorqueWorld {
             body.afterAppend();
         }
     }
+
     /**
      * 移除刚体
      * @param body 
      */
     remove(body: Body) {
+        if(body.parent) {
+            body = body.parent;
+        }
+
         body.beforeRemove();
         Util.remove(this.engine.bodies, body);
         body.afterRemove();

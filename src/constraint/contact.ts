@@ -7,7 +7,6 @@ import { Manifold, Collision } from "../collision/manifold";
 // 接触约束
 export class Contact {
     position: Vector;
-    inverseMass: number;
     shareNormal: number;
     shareTangent: number;
     normalImpulse: number;
@@ -21,7 +20,6 @@ export class Contact {
         this.position = vertex;
         this.shareNormal = 0;
         this.shareTangent = 0;
-        this.inverseMass = 0;
         this.normalImpulse = 0;
         this.tangentImpulse = 0;
         this.depth = depth;
@@ -130,8 +128,8 @@ export class ContactConstraint {
                     p.x = normal.x * contact.normalImpulse + tangent.x * contact.tangentImpulse;
                     p.y = normal.y * contact.normalImpulse + tangent.y * contact.tangentImpulse;
 
-                    bodyA.applyImpulse(p, contact.offsetA, dt);
-                    bodyB.applyImpulse(p.inv(p), contact.offsetB, dt); 
+                    bodyA.applyImpulse(p, contact.offsetA);
+                    bodyB.applyImpulse(p.inv(p), contact.offsetB); 
                 }
             }
         }
@@ -198,8 +196,8 @@ export class ContactConstraint {
                 impulse.x = normal.x * normalImpulse;
                 impulse.y = normal.y * normalImpulse;
 
-                bodyA.applyImpulse(impulse, contact.offsetA, dt);
-                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
+                bodyA.applyImpulse(impulse, contact.offsetA);
+                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
                 
                 // --------------------------------------------------------------------------------------------
 
@@ -225,8 +223,8 @@ export class ContactConstraint {
                 impulse.x = tangent.x * tangentImpulse;
                 impulse.y = tangent.y * tangentImpulse;
 
-                bodyA.applyImpulse(impulse, contact.offsetA, dt);
-                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB, dt); 
+                bodyA.applyImpulse(impulse, contact.offsetA);
+                bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
             }
         }
     }

@@ -1,16 +1,17 @@
 import { Body } from "../body/body";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
-import { Axis, Poly, VertexList } from "../common/vertices";
-import { Arc } from "../common/arcs";
+import { Axis } from "../common/vertices";
 import { Contact } from "../constraint/contact";
+import { Polygon } from "../body/polygon";
+import { Circle } from "../body/circle";
 
 
 /**
  * 碰撞信息，碰撞流形，接触点
  */
 
-export type Geometry = Poly | Arc;
+// export type Geometry = Polygon | Circle;
 
 
 /**
@@ -23,9 +24,9 @@ export class Collision {
     // 碰撞刚体B
     bodyB: Body;
     // 碰撞子图形A
-    partA: Geometry;
+    partA: Body;
     // 碰撞子图形B
-    partB: Geometry;
+    partB: Body;
     // 分离轴
     axis: Axis = {
         value: null,
@@ -58,8 +59,8 @@ export class Manifold {
 
     bodyA: Body;
     bodyB: Body;
-    partA: Geometry;
-    partB: Geometry;
+    partA: Body;
+    partB: Body;
     // 碰撞信息
     collision: Collision;
     // 激活状态

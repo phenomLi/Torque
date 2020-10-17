@@ -3,10 +3,10 @@
  */
 
 import { Vector, _tempVector1 } from "../math/vector";
-import { Bound } from "../collision/bound";
+import { Bound } from "../common/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
-import { PolygonOpt } from "./polygon";
+import { Axis } from "../common/vertices";
 
 
 
@@ -19,7 +19,7 @@ import { PolygonOpt } from "./polygon";
 export enum bodyType {
     circle = 0,
     polygon = 1,
-    composite = 3
+    composite = 2
 };
 
 
@@ -132,10 +132,14 @@ export class Body {
     sleepCounter: number;
     // 碰撞码
     mask: number;
-    // 子图形
-    parts;
+    // 轴
+    axes: Axis[];
+    // 父图形
+    parent: Body;
     // 包围盒
     bound: Bound;
+    // 子图形
+    parts: Body[];
     // 与该刚体碰撞的刚体列表
     contactBodies: { [key: string]: Body };
 
@@ -173,9 +177,10 @@ export class Body {
         this.sleeping = false;
         this.sleepCounter = 0;
         this.mask = 1;
-        this.parts = [];
         this.bound = null;
         this.contactBodies = {};
+        this.parent = null;
+        this.parts = [this];
 
         this.methods = {
             filter: (maskA: number, maskB: number) => { return true; },
@@ -190,23 +195,37 @@ export class Body {
 
         Util.extend(this, opt);
 
-        this.init(opt);
+        this.beforeInitializeProperties(opt);
         this.area = this.getArea();
         this.density = this.getDensity();
         this.invMass = this.getInvMass();
         this.position = this.getCentroid();
         this.inertia = this.getInertia();
         this.invInertia = this.getInvInertia();
+        this.axes = this.getAxes();
+        this.bound = this.getBound();
         this.motion = this.velocity.len() ** 2 + this.angularVelocity ** 2;
+        this.afterInitializeProperties(opt);
+
+        // 用户一开始便设置了旋转的情况
+        if(this.rotation) {
+            this.rotate(this.rotation, this.position);
+        }
 
         // 设置渲染函数
         this.setRender(() => {});
     }
 
     /**
-     * 初始化一些数据
+     * 初始化属性前
      */
-    init(opt: PolygonOpt) {}
+    beforeInitializeProperties(opt: any) {}
+
+    /**
+     * 初始化属性后
+     * @param opt 
+     */
+    afterInitializeProperties(opt: any) {}
 
     // ------------------------------------------- getter---------------------------------------
 
@@ -250,9 +269,24 @@ export class Body {
     /**
      * 计算转动惯量
      * @override
+     * @param position 转动中心
      */
-    getInertia(): number {
+    getInertia(position?: Vector): number {
         return 1;
+    }
+
+    /**
+     * 获取轴
+     */
+    getAxes(): Axis[] {
+        return [];
+    }
+
+    /**
+     * 获取包围盒
+     */
+    getBound(): Bound {
+        return null;
     }
 
     // ------------------------------------------- setter ---------------------------------------
@@ -359,9 +393,9 @@ export class Body {
      * @param offset 作用点（本地坐标系）
      * @param dt 步长
      */
-    applyImpulse(impulse: Vector, offset: Vector, dt: number) {
+    applyImpulse(impulse: Vector, offset: Vector) {
         if(this.static || this.kinetic || this.sleeping) return;
-
+        
         this.velocity.x += impulse.x * this.invMass;
         this.velocity.y += impulse.y * this.invMass;
         this.angularVelocity += this.invInertia * offset.cro(impulse);
@@ -433,14 +467,6 @@ export class Body {
         this.force.x = 0;
         this.force.y = 0;
         this.torque = 0;
-    }
-
-    /**
-     * 在每一帧结束后重置部分数据
-     */
-    reset() {
-        this.force.x = 0;
-        this.force.y = 0;
     }
 
     // ------------------------------------------------ hook ------------------------------

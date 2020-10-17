@@ -4,7 +4,7 @@
 
 import { Polygon, PolygonOpt } from "./polygon";
 import { Vector } from "../math/vector";
-import { Poly, Vertices } from "../common/vertices";
+import { VertexList } from "../common/vertices";
 
 
 
@@ -24,14 +24,13 @@ export class Rect extends Polygon {
         super(opt);
     }
 
-    getPoly(): Poly {
+    getVertexList(): VertexList {
         let leftTop = this.origin.col(),
             rightTop = leftTop.add(new Vector(this.width, 0)),
             rightBottom = leftTop.add(new Vector(this.width, this.height)),
-            leftBottom = leftTop.add(new Vector(0, this.height)),
-            poly = Vertices.create(this, [leftTop, rightTop, rightBottom, leftBottom]);
+            leftBottom = leftTop.add(new Vector(0, this.height));
 
-        return poly;
+        return [leftTop, rightTop, rightBottom, leftBottom];
     }
 
     getArea(): number {

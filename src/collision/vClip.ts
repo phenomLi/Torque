@@ -95,8 +95,6 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
         incVertex[1] = incEdge.end;
     }
 
-    
-
     // ------------------------------------- 接下来进行两边筛选 -------------------
     removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
     if(removeIndex !== -1 && incVertex[removeIndex]) {

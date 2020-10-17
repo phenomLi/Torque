@@ -86,7 +86,7 @@ export class TimeStepper {
         // 动态计算fps
         this.frameCounter += 1;
         if (timeStamp - this.frameStamp >= 1000) {
-            this.fps = this.frameCounter * ((timeStamp - this.frameStamp) / 1000);
+            this.fps = this.frameCounter / ((timeStamp - this.frameStamp) / 1000);
             this.frameStamp = timeStamp;
             this.frameCounter = 0;
         }

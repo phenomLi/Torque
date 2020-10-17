@@ -182,7 +182,6 @@ export class Vector {
      * @param point 绕的点
      */
     rot(radian: number, point: Vector, out?: Vector): Vector {
-        point = point || new Vector();
         out = out || new Vector();
 
         let cos = Math.cos(radian),

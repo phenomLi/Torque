@@ -1,5 +1,6 @@
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
-import { VertexList, Vertices } from "../common/vertices";
+import { VertexList, Vertices } from "./vertices";
+import { Body } from "../body/body";
 
 
 
@@ -11,8 +12,8 @@ export class Bound {
     max: Vector;
 
     constructor(min: Vector, max: Vector) {
-        this.min = new Vector();
-        this.max = new Vector();
+        this.min = new Vector(0, 0);
+        this.max = new Vector(0, 0);
         this.set(min, max);
     }
 
@@ -60,6 +61,43 @@ export class Bound {
     }
 
     /**
+     * 根据子包围盒更新包围盒
+     * @param bodies
+     */
+    updateByBounds(bodies: Body[]) {
+        let bound: Bound,
+            maxX: number = -Infinity, 
+            maxY: number = -Infinity,
+            minX: number = Infinity,
+            minY: number = Infinity; 
+
+        for(let i = 0; i < bodies.length; i++) {
+            bound = bodies[i].bound;
+            
+            if(bound.min.x < minX) {
+                minX = bound.min.x;
+            }
+
+            if(bound.min.y < minY) {
+                minY = bound.min.y;
+            }
+
+            if(bound.max.x > maxX) {
+                maxX = bound.max.x;
+            }
+
+            if(bound.max.y > maxY) {
+                maxY = bound.max.y;
+            }
+        }
+
+        this.min.x = minX;
+        this.min.y = minY;
+        this.max.x = maxX;
+        this.max.y = maxY;
+    }
+
+    /**
      * 两包围盒求交集
      * @param b 
      */
@@ -97,8 +135,8 @@ export class Bound {
             max: Vector = _tempVector2;
 
         min.x = Math.min(this.min.x, bound.min.x);
-        min.y = Math.min(this.min.x, bound.min.x);
-        max.x = Math.max(this.max.y, bound.max.y);
+        min.y = Math.min(this.min.y, bound.min.y);
+        max.x = Math.max(this.max.x, bound.max.x);
         max.y = Math.max(this.max.y, bound.max.y);
 
         return new Bound(_tempVector1, _tempVector2);

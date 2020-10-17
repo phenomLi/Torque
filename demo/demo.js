@@ -46,22 +46,26 @@ function getRandom(number, min = 0) {
 function createWall(cWidth, cHeight, wallWidth, opt) {
     // 顶墙壁
     creator.rect(0, 0, cWidth, wallWidth, {
-        ...opt
+        ...opt,
+        static: true
     });
 
     // 底墙壁
     creator.rect(0, cHeight - wallWidth, cWidth, wallWidth, {
-        ...opt
+        ...opt,
+        static: true
     });
     
     // 左墙壁
     creator.rect(0, 0, wallWidth, cHeight, {
-        ...opt
+        ...opt,
+        static: true
     });
 
     // 右墙壁
     creator.rect(cWidth - wallWidth, 0, wallWidth, cHeight, {
-        ...opt
+        ...opt,
+        static: true
     });
 }
 
@@ -77,23 +81,58 @@ function createStack(row, col, x, w) {
     }
 }
 
-createWall(canvasWidth, canvasHeight, 30, {
-    ...options,
-    static: true
-});
 
 
-creator.polygon(300, 250, [
+
+let concave = creator.polygon(300, 250, [
     [0, 0], [20, 0], [20, 100], 
     [70, 150], [170, 150], [210, 100], [210, 0],
     [230, 0], [230, 100], [170, 170], 
     [70, 170], [0, 100], 
 ], {
-    static: true,
+    kinetic: true,
     ...options
 });
 
+concave.setAngularVelocity(0.5);
+
+
+let moveRect = creator.rect(800, 500, 80, 30, {
+    kinetic: true,
+    ...options
+}),
+    rotateRect = creator.rect(900, 200, 50, 50, {
+    kinetic: true,
+    ...options
+});
+
+let counter = 0;
+creator.t.on('beforeUpdate', () => {
+    counter += 0.014;
+    moveRect.setVelocity(1000 + 300 * Math.sin(counter) - moveRect.position.x, 0);
+});
+
+rotateRect.setAngularVelocity(5);
+
+
+let r1 = creator.rect(700, 500, 80, 30, {
+    ...options
+});
+    r2 = creator.rect(725, 500, 30, 100, {
+    ...options
+});
+    c1 = creator.circle(740, 600, 30, {
+    ...options
+});
+
+creator.composite([c1, r1, r2]);
+
+
+
 createStack(4, 4, 100, 30);
+createWall(canvasWidth, canvasHeight, 30, options);
+
+
 
 
 canvas.addEventListener('click', e => {
@@ -116,25 +155,6 @@ canvas.addEventListener('click', e => {
     });
 });
 
-
-let rect = creator.rect(700, 200, 80, 30, {
-    fill: '#f38181',
-    kinetic: true,
-    ...options
-});
-
-let counter = 0;
-creator.t.on('beforeUpdate', () => {
-    counter += 0.014;
-
-    if (counter < 0) {
-        return;
-    }
-
-    let px = 700 + 300 * Math.sin(counter);
-
-    rect.setVelocity(px - rect.position.x, 0);
-});
 
 creator.t.start();
 

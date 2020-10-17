@@ -1,21 +1,23 @@
-import { Axis, Poly, VertexList } from "../common/vertices";
+import { Body, bodyType } from "../body/body";
+import { Circle } from "../body/circle";
+import { Polygon } from "../body/polygon";
+import { Axis, VertexList } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2, _tempVector3 } from "../math/vector";
-import { Geometry } from "./manifold";
 
 
 
 
-export function axesFilter(polyA: Poly, geometryB: Geometry): Axis[] {
-    let centroidVector = geometryB.centroid.sub(polyA.centroid, _tempVector1),
+export function axesFilter(poly: Polygon, geometry: Body): Axis[] {
+    let centroidVector = geometry.position.sub(poly.position, _tempVector1),
         axesA: Axis[], axesB: Axis[],
         supportIndexA: number, supportIndexB: number,
         i, res: Axis[] = [];
 
-    axesA = findClosestAxes(polyA, geometryB, centroidVector);
+    axesA = findClosestAxes(poly, geometry, centroidVector);
     supportIndexA = axesA[0].supportVertexIndex;
 
-    if(geometryB instanceof Poly) {
-        axesB = findClosestAxes(geometryB, polyA, centroidVector.inv(centroidVector));
+    if(geometry.type === bodyType.polygon) {
+        axesB = findClosestAxes(<Polygon>geometry, poly, centroidVector.inv(centroidVector));
         supportIndexB = axesB[0].supportVertexIndex;
     }
 
@@ -41,7 +43,7 @@ export function axesFilter(polyA: Poly, geometryB: Geometry): Axis[] {
  * @param centroidVector 
  * @param oppositeCentroid
  */
-function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector): Axis[] {
+function findClosestAxes(poly: Polygon, geometry: Body, centroidVector: Vector): Axis[] {
     let v: VertexList = poly.vertexList,
         axes: Axis[] = poly.axes,
         vertex: Vector,
@@ -51,8 +53,8 @@ function findClosestAxes(poly: Poly, geometry: Geometry, centroidVector: Vector)
         dot: number,
         lastDot: number = -1,
         index: number = 0,
-        opposite = geometry instanceof Poly? geometry.vertexList: geometry,
-        oppositeCentroid = geometry.centroid,
+        opposite = geometry.type === bodyType.polygon? (<Polygon>geometry).vertexList: <Circle>geometry,
+        oppositeCentroid = geometry.position,
         res: Axis[] = [];
 
     if(axes[axes.length - 1]) {

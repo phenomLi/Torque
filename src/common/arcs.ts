@@ -1,7 +1,8 @@
 import { Vector } from "../math/vector";
 import { Circle } from "../body/circle";
-import { Axis, Poly, Vertices } from "./vertices";
-import { Bound } from "../collision/bound";
+import { Axis, Vertices } from "./vertices";
+import { Bound } from "./bound";
+import { Polygon } from "../body/polygon";
 
 
 const _tempDynamicAxis: Axis = {
@@ -14,52 +15,27 @@ const _tempDynamicAxis: Axis = {
 };
 
 
-// 一个圆形信息包
-export class Arc {
-    id: number;
-    centroid: Vector;
-    radius: number;
-    body: Circle;
-    bound: Bound;
-
-    constructor(body: Circle, centroid: Vector, radius: number) {
-        this.id = body.id;
-        this.body = body;
-        this.centroid = centroid;
-        this.radius = radius;
-        this.bound = Arcs.getBound(centroid, radius);
-    }
-}
-
-
 
 
 export const Arcs = {
-    /**
-     * 创造圆形信息包
-     * @param body 
-     */
-    create(body: Circle): Arc {
-        return new Arc(body, body.position.col(), body.radius);
-    },
-
+ 
     /**
      * 获取两个圆的圆心间的距离
      * @param circleA 
      * @param circleB 
      */
-    distance(circleA: Arc, circleB: Arc): number {
-        return circleA.centroid.sub(circleB.centroid).len();
+    distance(circleA: Circle, circleB: Circle): number {
+        return circleA.position.sub(circleB.position).len();
     },
 
     /**
      * 获取圆形和顶点集间的轴
      * @param vertices 顶点信息
      */
-    getAxes(circle: Arc, poly: Poly): Axis {
-        let closestVertex = Vertices.getClosestVertex(circle.centroid, poly.vertexList);
+    getAxes(circle: Circle, poly: Polygon): Axis {
+        let closestVertex = Vertices.getClosestVertex(circle.position, poly.vertexList);
 
-        _tempDynamicAxis.value = closestVertex.sub(circle.centroid).nol();
+        _tempDynamicAxis.value = closestVertex.sub(circle.position).nol();
 
         return _tempDynamicAxis;
     },
@@ -75,8 +51,8 @@ export const Arcs = {
      * 获取圆形在给定轴上的投影
      * @param axis 
      */
-    projection(circle: Arc, axis: Vector): {min: number, max: number} {
-        let len = circle.centroid.pro(axis);
+    projection(circle: Circle, axis: Vector): {min: number, max: number} {
+        let len = circle.position.pro(axis);
 
         return {
             min: len - circle.radius,
@@ -89,21 +65,7 @@ export const Arcs = {
      * @param circle 
      * @param point 
      */
-    isContains(circle: Arc, point: Vector): boolean {
-        return circle.radius ** 2 - circle.centroid.sub(point).len_s() > 0; 
-    },
-
-    /**
-     * 位移圆形
-     * @param arc
-     * @param dx
-     * @param dy
-     */
-    translate(arc: Arc, dx: number, dy: number) {
-        arc.centroid.x += dx;
-        arc.centroid.y += dy;
-
-        // 位移包围盒
-        arc.bound.translate(dx, dy);
+    isContains(circle: Circle, point: Vector): boolean {
+        return circle.radius - (point.x - circle.position.x) ** 2 + (point.y - circle.position.y) > 0; 
     }
 };
