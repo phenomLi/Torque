@@ -40,7 +40,7 @@ rect.setRender(function(body) {
     rectangle.rotation = body.rotation;
 });
 
-app.stage.add(rectShape);
+app.stage.add(rectangle);
 ```
 至此，由PIXI创建的矩形`rectangle`与Torque世界的矩形`rect`通过`setRender`函数绑定在了一起。刷新浏览器，可以看见一个黑色边框的，长宽都为100的矩形出现在(100, 100)的位置。
 
