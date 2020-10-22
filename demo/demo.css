@@ -1,0 +1,130 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100%;
+    height: 100vh;
+}
+
+#container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+#side-bar {
+    width: 15%;
+    height: 100%;
+    border-right: 1px solid #ddd;
+}
+
+#status-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 35px;
+    border: 1px solid #555;
+    margin: 20px auto;
+    cursor: pointer;
+}
+
+#status-button:hover {
+    background-color: #eee;
+}
+
+#status-button > i {
+    font-size: 20px;
+    color: #555;
+    padding: 0;
+    margin: 0;
+}
+
+#action-bar {
+    margin: 20px 0 20px 0;
+    padding: 12px 8px 12px 8px;
+    list-style: none;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #555;
+    border-bottom: 1px solid #555;
+}
+
+#action-bar > li {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#action-bar > .action--active {
+    background-color: #ddd;
+}
+
+#action-bar .fa-play {
+    transform: rotate(-90deg);
+}
+
+.info-field {
+    width: 100%;
+    padding: 0 20px 0 20px;
+    margin-bottom: 12px;
+}
+
+.info-field > .title {
+    display: inline-block;
+    padding: 4px;
+    color: #555;
+    border: 1px solid #555;
+    font-size: 12px;
+}
+
+.info-field > .value {
+    padding: 4px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+}
+
+#body-info-container > i {
+    display: block;
+    margin: 0 auto 0;
+    width: 34px;
+    padding: 8px 0 8px 0;
+    color: #555;
+    font-size: 20px;
+    text-align: center;
+    border-radius: 4px;
+}
+
+#body-info-container > i:hover {
+    background-color: #ddd;
+}
+
+
+#examples {
+    display: block;
+    width: 80%;
+    margin: 20px auto 0;
+    padding: 6px;
+}
+
+#stage {
+    width: 85%;
+    height: 100%;
+}
+
+#canvas {
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+}

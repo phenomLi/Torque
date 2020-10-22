@@ -14,7 +14,7 @@ import { Axis } from "../common/vertices";
  * 刚体类型
  * 圆形：0
  * 多边形：1
- * 复合体：4
+ * 复合体：2
  */
 export enum bodyType {
     circle = 0,
@@ -142,13 +142,10 @@ export class Body {
     parts: Body[];
     // 与该刚体碰撞的刚体列表
     contactBodies: { [key: string]: Body };
-
     // 方法
     methods: BodyOpt['methods'];
-
     // 渲染函数
     render: Function;
-
 
     constructor(opt: BodyOpt, type: number) {
         this.id = Util.id();
@@ -289,6 +286,28 @@ export class Body {
         return null;
     }
 
+    /**
+     * 获取刚体类型
+     */
+    getBodyType(): string {
+        if(this.type === 0) {
+            return 'circle';
+        }
+        else if(this.type === 1) {
+            return 'polygon';
+        }
+        else {
+            return 'composite';
+        }
+    }
+
+    /**
+     * 获取复合刚体的子刚体
+     */
+    getChildren(): Body[] {
+        return this.parts[0] !== this? this.parts: null;
+    }
+
     // ------------------------------------------- setter ---------------------------------------
     
     /**
@@ -367,7 +386,15 @@ export class Body {
         if(fn && typeof fn === 'function') this.render = fn;
     }
 
-    
+    /**
+     * 是否包含某个顶点
+     * @override
+     * @param x 
+     * @param y 
+     */
+    isContains(x: number, y: number): boolean {
+        return false;
+    }
 
     // ------------------------------------------- 内部方法 ----------------------------------------
 
@@ -395,7 +422,7 @@ export class Body {
      */
     applyImpulse(impulse: Vector, offset: Vector) {
         if(this.static || this.kinetic || this.sleeping) return;
-        
+
         this.velocity.x += impulse.x * this.invMass;
         this.velocity.y += impulse.y * this.invMass;
         this.angularVelocity += this.invInertia * offset.cro(impulse);
@@ -449,6 +476,7 @@ export class Body {
         this.position.x += dx;
         this.position.y += dy;
         this.rotation += dr;
+        this.rotation = this.rotation % (Math.PI * 2);
 
         //位移刚体
         this.translate(dx, dy);
@@ -463,7 +491,12 @@ export class Body {
 
         //更新动量
         this.motion = speed * speed + angularSpeed * angularSpeed;
+    }
 
+    /**
+     * 请客当前时刻受力
+     */
+    clearForce() {
         this.force.x = 0;
         this.force.y = 0;
         this.torque = 0;
@@ -495,11 +528,13 @@ export class Body {
 
     beforeRemove() { 
         let sleeping = this.engine.sleeping,    
-            keys = Object.keys(this.contactBodies);
+            keys = Object.keys(this.contactBodies),
+            body: Body;
 
         // 在删除一个刚体前，唤醒与之有碰撞的刚体
         for(let i = 0; i < keys.length; i++) {
-            sleeping.wake(this.contactBodies[keys[i]]);
+            body = this.contactBodies[keys[i]];
+            body.sleeping && sleeping.wake(body);
         }
 
         this.methods.beforeRemove(this); 

@@ -13,37 +13,36 @@ const torque = new Torque(width, height);
 const rect = Torque.body.Rect(100, 100, 100, 200);      
 torque.append(rect);
 ```
-此时一个宽 100，高 200 的矩形被创建在物理世界中的（100，100）位置上。但是此时我们看不到任何画面。
+此时一个宽 100，高 200 的矩形被创建在物理世界中的(100，100)位置上。但是此时我们看不到任何画面。
 
-Torque 仅包含物理计算，不包含渲染器，因此你需要选取一个渲染器进行图形绘制。以 [zrender](https://ecomfe.github.io/zrender-doc/public/) 为例，给这个矩形添加渲染器：
+Torque 仅包含物理计算，不包含渲染器，因此你需要选取一个渲染器进行图形绘制。以 [PIXI](https://github.com/pixijs/pixi.js) 为例，给这个矩形添加渲染器：
 ```javascript
-const rectShape = new zrender.Rect({
-    origin: [w / 2, h / 2],
-    position: [x, y],
-    rotation: -rect.rotation || 0,
-    shape: {
-        x: 0,
-        y: 0,
-        width: w,
-        height: h
-    },
-    style: {
-        fill: '#f38181',
-        text: rect.id,
-        transformText: true
-    }
+const app = new PIXI.Application({
+    width: 800, 
+    height: 600,
+    antialias: true,   
 });
+
+let rectangle = new PIXI.Graphics();
+
+shape.lineStyle(0.8, 0x000000, 1);
+shape.beginFill();
+        
+rectangle.position.x = 100 + 100 / 2;
+rectangle.position.y = 100 + 100 / 2;
+rectangle.drawRect(-100 / 2, -100 / 2, 100, 100);
+
+rectangle.endFill();
 
 rect.setRender(function(body) {
-    rectShape.attr({
-        rotation: -body.rotation,
-        position: [body.position.x - w / 2, body.position.y - h / 2]
-    });
+    rectangle.position.x = body.position.x;
+    rectangle.position.y = body.position.y;
+    rectangle.rotation = body.rotation;
 });
 
-zr.add(rectShape);
+app.stage.add(rectShape);
 ```
-刷新浏览器，享受 torque 创建的物理事件把！
+至此，由PIXI创建的矩形`rectangle`与Torque世界的矩形`rect`通过`setRender`函数绑定在了一起。刷新浏览器，可以看见一个黑色边框的，长宽都为100的矩形出现在(100, 100)的位置。
 
 
 ## feature
@@ -61,7 +60,8 @@ zr.add(rectShape);
 - 摩擦力，静摩擦力，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 
-## demo
+## Demo
+（最新的DEMO已将渲染器从zrender替换至PIXI，因PIXI是基于WebGL渲染，具有更好的性能）
 [戳这里](https://phenomli.github.io/Torque/)
 
 ## 关于SATBoost
@@ -70,5 +70,6 @@ SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信截图_20200913175522.png)
 
 SATBoost主要针对SAT进行改进，但同时，SATBoost也优化了碰撞复用和碰撞点求解的性能。
+
 ## A.D.
 想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）

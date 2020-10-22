@@ -42,9 +42,9 @@ export class TorqueWorld {
     }
 
     /**
-     * 清空引擎
+     * 销毁引擎
      */
-    clear() {
+    destroy() {
         this.engine.bodies.map(body => this.remove(body));
         this.engine.manifoldTable.clear();
     }
@@ -93,7 +93,14 @@ export class TorqueWorld {
      * 获取帧率
      */
     getFPS(): number {
-        return this.engine.timeStepper.getFPS();
+        return this.engine.timeStepper.fps;
+    }
+
+    /**
+     * 获取所有刚体
+     */
+    getBodies(): Body[] {
+        return this.engine.bodies;
     }
 }
 

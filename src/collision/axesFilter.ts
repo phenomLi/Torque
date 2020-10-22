@@ -6,7 +6,6 @@ import { Vector, _tempVector1, _tempVector2, _tempVector3 } from "../math/vector
 
 
 
-
 export function axesFilter(poly: Polygon, geometry: Body): Axis[] {
     let centroidVector = geometry.position.sub(poly.position, _tempVector1),
         axesA: Axis[], axesB: Axis[],
@@ -51,23 +50,18 @@ function findClosestAxes(poly: Polygon, geometry: Body, centroidVector: Vector):
         distance: number,
         minDistance: number = Infinity,
         dot: number,
-        lastDot: number = -1,
-        index: number = 0,
+        lastDot: number = axes[axes.length - 1].value.dot(centroidVector),
+        index: number = -1,
         opposite = geometry.type === bodyType.polygon? (<Polygon>geometry).vertexList: <Circle>geometry,
-        oppositeCentroid = geometry.position,
-        res: Axis[] = [];
+        oppositeCentroid = geometry.position;
 
-    if(axes[axes.length - 1]) {
-        lastDot = axes[axes.length - 1].value.dot(centroidVector);
-    }
-    
     for(let i = 0; i < v.length; i++) {
         vertex = v[i];
         axis = axes[i];
 
-        dot = axis? axis.value.dot(centroidVector): -1;
+        dot = axis.value.dot(centroidVector);
  
-        if(dot <= 0 && lastDot <= 0) {
+        if(dot < 0 && lastDot < 0) {
             continue;
         }
 
@@ -85,19 +79,13 @@ function findClosestAxes(poly: Polygon, geometry: Body, centroidVector: Vector):
         prevAxis = axes[prev],
         indexAxis = axes[index];
 
-    if(prevAxis) {
-        res.push(prevAxis);
-    }
+    prevAxis.supportVertexIndex = index;
+    prevAxis.opposite = opposite;
+    prevAxis.origin = poly.vertexList;
 
-    if(indexAxis) {
-        res.push(indexAxis);
-    }
-
-    for(let i = 0; i < res.length; i++) {
-        res[i].supportVertexIndex = index;
-        res[i].opposite = opposite;
-        res[i].origin = poly.vertexList;
-    }
-
-    return res;
+    indexAxis.supportVertexIndex = index;
+    indexAxis.opposite = opposite;
+    indexAxis.origin = poly.vertexList;
+    
+    return [prevAxis, indexAxis];
 }

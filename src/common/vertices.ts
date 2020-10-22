@@ -298,7 +298,7 @@ export const Vertices = {
         for(let i = 0; i < len; i++) {
             cur = v[i], next = v[(i + 1) % len];
 
-            if((point.x - cur.x) * (next.y - cur.y) + (point.y - cur.y) * (cur.x - next.x) > 0) {
+            if((point.x - cur.x) * (next.y - cur.y) + (point.y - cur.y) * (cur.x - next.x) >= 0) {
                 return false;
             } 
         }

@@ -4,67 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
+<link rel="stylesheet" href="./demo/fontawesome/fontawesome.min.css">
+<link rel="stylesheet" href="./demo/fontawesome/all.min.css">
+<link rel="stylesheet" href="./demo/demo.css">
 <title>Torque demo</title>
-<style>
-
-* {
-    margin: 0;
-    padding: 0;
-}
-
-
-
-#canvas {
-    width: 100%;
-    height: 700px;
-    background-color: #fff;
-}
-
-</style>
 </head>
 <body>
 
+<div id="container">
+    <div id="side-bar">
+        <div id="status-button" @click="toggleEngineStatus">
+            <i :class="'fas ' + (engineStatus? 'fa-pause': 'fa-play')"></i>
+        </div>
+        <div class="info-field">
+            <div class="title">指针位置</div>
+            <div class="value">({{position.x}}, {{position.y}})</div>
+        </div>
+        <div class="info-field">
+            <div class="title">FPS</div>
+            <div class="value">{{fps}}</div>
+        </div>
+        <div class="info-field">
+            <div class="title">刚体数目</div>
+            <div class="value">{{bodyNumber}}</div>
+        </div>
 
-<div id="canvas"></div>
+        <ul id="action-bar">
+            <li 
+            v-for="(item, index) in actionsListIcon" 
+            @click="selectAction(item, index)"
+            :class="index === selectedActionIndex? 'action--active': ''"
+            >
+                <i :class="'fas fa-' + item"></i>
+            </li>
+        </ul>
 
-<button id="status">暂停</button>
-<div id="mouse_pos" style="display: inline-block;"></div>
-<div style="display: inline-block;">FPS: <span id="fps"></span></div>
+        <div id="body-info-container" v-if="showBodyInfo">
+            <div class="info-field" v-for="(item, index) in selectedBodyInfo">
+                <div class="title">{{item.title}}</div>
+                <div class="value">{{item.value}}</div>
+            </div>
 
-<script src="./lib/zrender.min.js"></script>
+            <i class="fas fa-trash" @click="removeBody"></i>
+        </div>
+        <div v-else>
+            <select id="examples" v-model="curWorldIndex">
+                <option :value="index" v-for="(item, index) in examples">{{item[0]}}</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="stage" @mousemove="updatePosition" @click="stageClick">
+        <div id="canvas"></div>
+    </div>
+</div>
+
+<script src="./demo/vue.js"></script>
 <script src="./dist/torque.js"></script>
-<script src="./lib/creator.js"></script>
+<script src="./lib/pixi.js"></script>
+<script src="./lib/renderer.js"></script>
+<script src="./demo/examples/basic.js"></script>
+<script src="./demo/examples/stack.js"></script>
+<script src="./demo/examples/kinetic.js"></script>
+<script src="./demo/examples/composite.js"></script>
 <script src="./demo/demo.js"></script>
-<script>
-
-let engineStatus = true; 
-
-const mouse_pos = document.getElementById('mouse_pos'),
-      status = document.getElementById('status'),
-      fps = document.getElementById('fps');
-
-canvas.addEventListener('mousemove', e => {
-    mouse_pos.innerText = 'x: ' + e.offsetX + '  y: ' + e.offsetY;
-});
-
-status.addEventListener('click', () => {
-    engineStatus = !engineStatus;
-
-    if(engineStatus) {
-        status.innerText = '暂停';
-        creator.t.start();
-    }
-    else {
-        status.innerText = '开始';
-        creator.t.pause();
-    }
-});
-
-
-creator.t.on('tickEnd', () => {
-    fps.innerText = creator.t.getFPS().toFixed(1);
-});
-
-</script>
 </body>
 </html>

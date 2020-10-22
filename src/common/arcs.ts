@@ -66,6 +66,6 @@ export const Arcs = {
      * @param point 
      */
     isContains(circle: Circle, point: Vector): boolean {
-        return circle.radius - (point.x - circle.position.x) ** 2 + (point.y - circle.position.y) > 0; 
+        return circle.radius - Math.hypot(point.x - circle.position.x, point.y - circle.position.y) > 0; 
     }
 };

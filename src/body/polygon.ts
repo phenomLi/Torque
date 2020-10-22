@@ -96,4 +96,8 @@ export class Polygon extends Body {
         // 更新包围盒
         this.bound.update(this.vertexList);
     }
+
+    isContains(x: number, y: number): boolean {
+        return Vertices.isContains(this.vertexList, new Vector(x, y));
+    }
 }

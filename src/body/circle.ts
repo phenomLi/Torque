@@ -55,4 +55,8 @@ export class Circle extends Body {
         this.origin = this.origin.rot(radian, point, this.origin);
         this.bound.translate(this.origin.x - ox, this.origin.y - oy);
     }
+
+    isContains(x: number, y: number): boolean {
+        return Arcs.isContains(this, new Vector(x, y));
+    }
 }

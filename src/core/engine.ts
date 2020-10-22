@@ -2,7 +2,7 @@ import { Body } from "../body/body";
 import { Vector } from "../math/vector";
 import { Util } from "../common/util";
 import { TimeStepper } from "./timeStepper";
-import { broadPhasePair, Detector } from "../collision/detector";
+import { Detector } from "../collision/detector";
 import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
@@ -88,8 +88,6 @@ export class Engine {
     // 方法
     methods: EngineOpt['methods'];
 
-    collision;
-
     constructor(width: number, height: number, opt?: EngineOpt) {
         this.width = width || 0;
         this.height = height || 0;
@@ -155,8 +153,6 @@ export class Engine {
         if(this.enableCollisionDetection) {
             // 进行碰撞检测
             let collisions: Collision[] = this.detector.detect(this.bodies);
-            
-            this.collision = collisions;
 
             //根据得到的碰撞对更新碰撞流形
             this.manifoldTable.update(collisions, timeStamp);
@@ -177,6 +173,7 @@ export class Engine {
         for(let i = 0; i < this.bodies.length; i++) {
             // 积分速度
             this.bodies[i].integrateVelocities(dt);
+            this.bodies[i].clearForce();
         }
 
         this.manifoldTable.collisionStart.length && this.collisionStart();
@@ -191,7 +188,7 @@ export class Engine {
     render(dt: number) {
         let body: Body, i, j;
             
-        for(let i = 0; i < this.bodies.length; i++) {
+        for(i = 0; i < this.bodies.length; i++) {
             body = this.bodies[i];
 
             // 睡眠或者静态的刚体不用每一帧都渲染

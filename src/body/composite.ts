@@ -3,7 +3,7 @@ import { Compose } from "../common/Compose";
 import { Vertices } from "../common/vertices";
 import { Vector } from "../math/vector";
 import { Body, BodyOpt, bodyType } from "./body";
-import { Polygon } from "./polygon";
+
 
 /**
  * 复合刚体
@@ -119,6 +119,14 @@ export class Composite extends Body {
         }
 
         this.bound.updateByBounds(this.parts);
+    }
+
+    isContains(x: number, y: number): boolean {
+        for(let i = 0; i < this.parts.length; i++) {
+            if(this.parts[i].isContains(x, y)) return true;
+        }
+
+        return false;
     }
 }
 

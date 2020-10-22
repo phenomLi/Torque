@@ -14,7 +14,7 @@ export class TimeStepper {
     private status: boolean;
 
     // 帧率
-    private fps: number;
+    public fps: number;
     // 步长 （1000/fps）
     private dt: number;
     // 允许最小步长
@@ -141,12 +141,5 @@ export class TimeStepper {
         this.frameTotal = 0;
         this.engine.pause();
         window.cancelAnimationFrame(this.raf);
-    }
-
-    /**
-     * 获取帧率
-     */
-    getFPS(): number {
-        return this.fps;
     }
 }
