@@ -2,7 +2,9 @@ const examples = [
     ['基础例子', basicWorld],
     ['堆叠', stackWorld],
     ['运动刚体', kineticWorld],
-    ['复合刚体', compositeWorld]
+    ['复合刚体', compositeWorld],
+    ['压力测试', stressWorld],
+    ['真空', vacuumWorld]
 ];
 
 let renderer = null,
@@ -57,6 +59,9 @@ const vm = new Vue({
                 this.bodyNumber = engine.getBodies().length;
                 this.updateSelectedBodyInfo(selectedBody);
             });
+        },
+        refreshWorld() {
+            this.createWorld(this.curWorldIndex);
         },
         toggleEngineStatus() {
             this.engineStatus = !this.engineStatus;

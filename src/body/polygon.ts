@@ -78,12 +78,12 @@ export class Polygon extends Body {
         this.bound.translate(dx, dy);
     }
 
-    rotate(radian: number, point: Vector) {
+    rotate(radian: number) {
         // 旋转顶点
-        Vertices.rotate(this.vertexList, radian, point);
+        Vertices.rotate(this.vertexList, radian, this.rotateCenter);
 
-        _tempVector4.x = point.x - this.position.x;
-        _tempVector4.y = point.y - this.position.y;
+        _tempVector4.x = this.rotateCenter.x - this.position.x;
+        _tempVector4.y = this.rotateCenter.y - this.position.y;
 
         _tempVector4.x = 0;
         _tempVector4.y = 0;

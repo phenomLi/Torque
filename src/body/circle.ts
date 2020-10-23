@@ -46,13 +46,13 @@ export class Circle extends Body {
         this.bound.translate(dx, dy);
     }
 
-    rotate(radian: number, point: Vector) {
-        if(point === this.position) return;
+    rotate(radian: number) {
+        if(this.rotateCenter === this.position) return;
 
         let ox = this.origin.x,
             oy = this.origin.y;
 
-        this.origin = this.origin.rot(radian, point, this.origin);
+        this.origin = this.origin.rot(radian, this.rotateCenter, this.origin);
         this.bound.translate(this.origin.x - ox, this.origin.y - oy);
     }
 

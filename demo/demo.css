@@ -110,6 +110,20 @@ body {
     background-color: #ddd;
 }
 
+#world-select-container > i {
+    display: block;
+    margin: 20px auto 0;
+    width: 34px;
+    padding: 8px 0 8px 0;
+    color: #555;
+    font-size: 20px;
+    text-align: center;
+    border-radius: 4px;
+}
+
+#world-select-container > i:hover {
+    background-color: #ddd;
+}
 
 #examples {
     display: block;

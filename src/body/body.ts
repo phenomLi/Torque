@@ -7,6 +7,7 @@ import { Bound } from "../common/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
 import { Axis } from "../common/vertices";
+import { Pin } from "../constraint/pin";
 
 
 
@@ -120,12 +121,12 @@ export class Body {
     friction: number;
     // 恢复系数
     restitution: number;
-    // 约束点
-    constraint: Vector;
     // 静态的
     static: boolean;
     // 运动的
     kinetic: boolean;
+    // 无视重力
+    ignoreGravity: boolean;
     // 休眠
     sleeping: boolean;
     // 休眠计数器
@@ -134,6 +135,8 @@ export class Body {
     mask: number;
     // 轴
     axes: Axis[];
+    // 旋转中心
+    rotateCenter: Vector;
     // 父图形
     parent: Body;
     // 包围盒
@@ -142,6 +145,8 @@ export class Body {
     parts: Body[];
     // 与该刚体碰撞的刚体列表
     contactBodies: { [key: string]: Body };
+    // 图钉约束
+    pinConstraint: Pin;
     // 方法
     methods: BodyOpt['methods'];
     // 渲染函数
@@ -166,11 +171,12 @@ export class Body {
         this.invInertia = 0;
         this.force = new Vector(0, 0);
         this.torque = 0;
-        this.friction = 0.4;
-        this.restitution = 0.9;
-        this.constraint = null;
+        this.friction = 10;
+        this.restitution = 0.8;
+        this.pinConstraint = null;
         this.static = false;
         this.kinetic = false
+        this.ignoreGravity = false;
         this.sleeping = false;
         this.sleepCounter = 0;
         this.mask = 1;
@@ -197,6 +203,7 @@ export class Body {
         this.density = this.getDensity();
         this.invMass = this.getInvMass();
         this.position = this.getCentroid();
+        this.rotateCenter = this.position;
         this.inertia = this.getInertia();
         this.invInertia = this.getInvInertia();
         this.axes = this.getAxes();
@@ -206,7 +213,7 @@ export class Body {
 
         // 用户一开始便设置了旋转的情况
         if(this.rotation) {
-            this.rotate(this.rotation, this.position);
+            this.rotate(this.rotation);
         }
 
         // 设置渲染函数
@@ -349,7 +356,7 @@ export class Body {
      */
     setRotation(rotation: number) {
         this.rotation = rotation;
-        this.rotate(rotation, this.position);
+        this.rotate(rotation);
     }
 
     /**
@@ -410,9 +417,8 @@ export class Body {
      * 旋转刚体
      * @override
      * @param angle 角度
-     * @param point 绕点
      */
-    rotate(angle: number, point: Vector) {}
+    rotate(angle: number) {}
 
     /**
      * 应用冲量
@@ -454,6 +460,12 @@ export class Body {
             return;
         }
 
+        let airFriction = (1 - this.engine.airFriction / 20);
+
+        this.velocity.x = airFriction * this.velocity.x;
+        this.velocity.y = airFriction * this.velocity.y;
+        this.angularVelocity = airFriction * this.angularVelocity;
+
         this.velocity.x += dt * this.force.x * this.invMass;
         this.velocity.y += dt * this.force.y * this.invMass;
         this.angularVelocity += dt * this.torque * this.invInertia; 
@@ -482,7 +494,7 @@ export class Body {
         this.translate(dx, dy);
         // 旋转刚体
         if(dr !== 0) {
-            this.rotate(dr, this.position);
+            this.rotate(dr);
         }
 
         // 更新标量速度

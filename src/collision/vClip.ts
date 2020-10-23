@@ -107,11 +107,11 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
     }
 
     if(incVertex[0]) {
-        contacts.push(new Contact(incVertex[0], depth));
+        contacts.push(new Contact(incVertex[0], Math.abs(d1)));
     }
 
     if(incVertex[1]) {
-        contacts.push(new Contact(incVertex[1], depth));
+        contacts.push(new Contact(incVertex[1], Math.abs(d2)));
     }
         
     return contacts;

@@ -7,6 +7,7 @@ import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
 import { ContactConstraint } from "../constraint/contact";
+import { PinConstraint } from "../constraint/pin";
 
 
 /**
@@ -70,6 +71,8 @@ export class Engine {
 
     // 重力
     gravity: Vector;
+    // 空气阻力
+    airFriction: number;
 
     // 刚体列表
     bodies: Body[];
@@ -79,8 +82,10 @@ export class Engine {
     detector: Detector;
     // 流形表
     manifoldTable: ManifoldTable;
-    // 接触约束
+    // 接触约束求解器
     contactConstraint: ContactConstraint;
+    // 图钉约束求解器
+    pinConstraint: PinConstraint;
     // 休眠管理器
     sleeping: Sleeping;
     // 引力缩放因子
@@ -93,6 +98,7 @@ export class Engine {
         this.height = height || 0;
         
         this.gravity = new Vector(0, 9);
+        this.airFriction = 0.05;
 
         this.enableSleeping = true;
         this.enableCollisionDetection = true;
@@ -136,6 +142,8 @@ export class Engine {
 
         for(let i = 0; i < this.bodies.length; i++) {
             let body = this.bodies[i];
+
+            if(body.ignoreGravity) continue;
 
             body.force.x += this.gravity.x * body.mass * this.gravityScaler;
             body.force.y += this.gravity.y * body.mass * this.gravityScaler;

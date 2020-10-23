@@ -47,17 +47,17 @@ app.stage.add(rectangle);
 
 ## feature
 - **SATBoost技术**
-- 休眠/唤醒技术
+- 休眠 / 唤醒技术
 - Warm Start
 - Sequential Impulses
-- 基于SATBoost的碰撞缓存/复用技术
+- 基于SATBoost的快速碰撞缓存 / 复用技术
 - 碰撞过滤
-- 基于SATBoost的V-clip碰撞点求解方法
+- 基于SATBoost的快速V-clip碰撞点求解方法
 - 动态 dt
 - 凹多边形
 - 复合刚体
-- 静态/运动的刚体
-- 摩擦力，静摩擦力，恢复系数
+- 静态 / 运动 / 动态的刚体
+- 摩擦力，静摩擦力，空气摩擦，恢复系数
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 
 ## Demo

@@ -47,10 +47,12 @@
 
             <i class="fas fa-trash" @click="removeBody"></i>
         </div>
-        <div v-else>
+        <div v-else id="world-select-container">
             <select id="examples" v-model="curWorldIndex">
                 <option :value="index" v-for="(item, index) in examples">{{item[0]}}</option>
             </select>
+
+            <i class="fas fa-redo-alt" @click="refreshWorld"></i>
         </div>
     </div>
 
@@ -67,6 +69,8 @@
 <script src="./demo/examples/stack.js"></script>
 <script src="./demo/examples/kinetic.js"></script>
 <script src="./demo/examples/composite.js"></script>
+<script src="./demo//examples/stress.js"></script>
+<script src="./demo/examples/vacuum.js"></script>
 <script src="./demo/demo.js"></script>
 </body>
 </html>

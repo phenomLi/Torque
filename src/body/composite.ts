@@ -63,6 +63,7 @@ export class Composite extends Body {
         }
 
         for(let i = 0; i < this.parts.length; i++) {
+            this.parts[i].rotateCenter = this.position;
             this.parts[i].parent = this;
             this.parts[i].static = this.static;
             this.parts[i].kinetic = this.kinetic;
@@ -107,7 +108,7 @@ export class Composite extends Body {
         this.bound.translate(dx, dy);
     }
 
-    rotate(radian: number, point: Vector) {
+    rotate(radian: number) {
         let part: Body;
 
         for(let i = 0; i < this.parts.length; i++) {
@@ -115,7 +116,7 @@ export class Composite extends Body {
 
             part.rotation += radian;
             part.position = part.position.rot(radian, this.position, part.position);
-            part.rotate(radian, point);
+            part.rotate(radian);
         }
 
         this.bound.updateByBounds(this.parts);

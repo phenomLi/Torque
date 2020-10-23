@@ -1,11 +1,11 @@
 
-function compositeWorld(canvas) {
+function vacuumWorld(canvas) {
 
     const canvasWidth = canvas.offsetWidth,
           canvasHeight = canvas.offsetHeight,
           vector = Torque.math.vector,
           renderer = new Renderer(canvas, canvasWidth, canvasHeight, {
-            gravity: vector(0, 9.8),
+            gravity: vector(0, 0),
             enableSleeping: true,
             enableCache: true,
             enableSATBoost: true,
@@ -32,25 +32,13 @@ function compositeWorld(canvas) {
     }
     
     createWall(canvasWidth, canvasHeight, 30, {...options, static: true});
+    
+    for(i = 0; i < 20; i++) {
+        renderer.createCircle(400, 400, 50, { ...options });
+        renderer.createRect(600, 400, 50, 50, { ...options });
+        renderer.createIsogon(800, 400, 50, 8, { ...options });
+    }
 
-    function createComposite() {
-        let rect1 = renderer.createRect(700, 500, 80, 30, {
-            ...options
-        });
-            rect2 = renderer.createRect(725, 500, 30, 100, {
-            ...options
-        });
-            circle1 = renderer.createCircle(740, 600, 30, {
-            ...options
-        });
-        
-        renderer.createComposite([circle1, rect1, rect2]);
-    }
-    
-    for(let i = 0; i < 20; i++) {
-        createComposite();
-    }
-    
     return renderer;
 }
     

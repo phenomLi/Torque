@@ -56,6 +56,8 @@ export class Sleeping {
      * @param body 
      */
     wake(body: Body) {
+        if(body.static) return;
+
         body.sleeping = false;
         body.sleepCounter = 0;
 
@@ -82,10 +84,10 @@ export class Sleeping {
             let motion = body.motion;
 
             // 若刚体合外力不为0，则唤醒
-            // if (body.force.x !== 0 || body.force.y !== 0) {
-            //     this.wake(body);
-            //     continue;
-            // }
+            if (body.force.x !== 0 || body.force.y !== 0) {
+                this.wake(body);
+                continue;
+            }
 
             // 若刚体已经休眠，则返回
             if(body.sleeping) continue;
@@ -122,13 +124,13 @@ export class Sleeping {
             bodyB = manifold.bodyB;
 
             // 若A为休眠状态且B的动量大于休眠阈值，唤醒A
-            if(bodyB.kinetic || !bodyA.static && bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
+            if(bodyB.kinetic || bodyA.sleeping && bodyB.motion > this.wakeMotionThreshold) {
                 this.wake(bodyA);
                 continue;
             }
 
             // B同理上面
-            if(bodyA.kinetic || !bodyB.static && bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
+            if(bodyA.kinetic || bodyB.sleeping && bodyA.motion > this.wakeMotionThreshold) {
                 this.wake(bodyB);
                 continue;
             }

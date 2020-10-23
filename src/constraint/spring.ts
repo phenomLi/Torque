@@ -2,6 +2,7 @@ import { Vector } from "../math/vector";
 import { Body } from "../body/body";
 import { Util } from "../common/util";
 
+
 export interface SpringOptions {
     target?: [Vector, Vector];
     body?: [Body, Body];
@@ -23,7 +24,7 @@ export class Spring {
         this.body = options.body;
         this.target = options.target;
 
-        // 若没有设定点却设定了物体，使用物体的质心
+        // 若没有设定点却设定了物体，使用物体的质心（局部坐标）
         if (this.body[0] && !this.target[0])
             this.target[0] = new Vector(0, 0);
         if (this.body[1] && !this.target[1])

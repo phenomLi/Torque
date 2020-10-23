@@ -5,7 +5,7 @@ const canvasWidth = canvas.offsetWidth,
       canvasHeight = canvas.offsetHeight,
       vector = Torque.math.vector,
       renderer = new Renderer(canvas, canvasWidth, canvasHeight, {
-        gravity: vector(0, 9),
+        gravity: vector(0, 9.8),
         enableSleeping: true,
         enableCache: true,
         enableSATBoost: true,
@@ -32,6 +32,10 @@ function createWall(cWidth, cHeight, wallWidth, options) {
 }
 
 createWall(canvasWidth, canvasHeight, 30, {...options, static: true});
+
+renderer.createCircle(400, 400, 50, { ...options });
+renderer.createRect(600, 400, 50, 50, { ...options });
+renderer.createIsogon(800, 400, 50, 8, { ...options });
 
 return renderer;
 

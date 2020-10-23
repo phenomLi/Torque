@@ -1,7 +1,8 @@
 import { Body } from "../body/body";
-import { Vector, _tempVector2, _tempVector1, _tempVector3 } from "../math/vector";
+import { Vector, _tempVector2, _tempVector1, _tempVector3, _tempVector4 } from "../math/vector";
 import { Util } from "../common/util";
 import { Manifold, Collision } from "../collision/manifold";
+import { Constraint } from "./constraint";
 
 
 // 接触约束
@@ -14,7 +15,8 @@ export class Contact {
     offsetA: Vector;
     offsetB: Vector;
     depth: number;
-    bias: number;
+    positionCorrectiveImpulse: number;
+    velocityBias: number;
 
     constructor(vertex: Vector, depth: number) {
         this.position = vertex;
@@ -22,8 +24,9 @@ export class Contact {
         this.shareTangent = 0;
         this.normalImpulse = 0;
         this.tangentImpulse = 0;
+        this.positionCorrectiveImpulse = 0;
         this.depth = depth;
-        this.bias = 0;
+        this.velocityBias = 0;
     }
 }
 
@@ -31,47 +34,39 @@ export class Contact {
  * 碰撞求解器
  */
 
-export class ContactConstraint {
-    // 碰撞求解迭代次数
-    private iterations: number;
+export class ContactConstraint extends Constraint {
     // 穿透修正误差
     private slop: number;
     // 偏移因子
     private biasFactor: number;
 
     constructor() {
-        this.iterations = 20;
+        super();
+
+        this.velocitySolverIterations = 20;
+        this.positionSolverIterations = 1;
         this.slop = 0.02;
         this.biasFactor = 0.2;
     }
 
-    /**
-     * 创建一个接触约束
-     * @param vertex 
-     * @param depth 
-     */
     create(vertex: Vector, depth: number): Contact {
         return new Contact(vertex, depth);
     }
 
-    /**
-     * 求解接触约束
-     * @param manifolds 
-     * @param dt 
-     */
     solve(manifolds: Manifold[], dt: number) {
-        this.preSolveVelocity(manifolds, dt);
-        for(let i = 0; i < this.iterations; i++) {
-            this.solveVelocity(manifolds, dt);
+        this.initSolver(manifolds, dt);
+
+        for(let i = 0; i < this.positionSolverIterations; i++) {
+            this.solvePosition(manifolds);
+        }
+
+        this.preSolveVelocity(manifolds);
+        for(let i = 0; i < this.velocitySolverIterations; i++) {
+            this.solveVelocity(manifolds);
         }
     }
 
-    /**
-     * 预处理
-     * @param manifolds 碰撞流形
-     * @param dt 步长
-     */
-    preSolveVelocity(manifolds: Manifold[], dt: number) {
+    initSolver(manifolds: Manifold[], dt: number) {
         let manifold: Manifold,
             collision: Collision,
             contact: Contact,
@@ -96,7 +91,7 @@ export class ContactConstraint {
                 contact = collision.contacts[j];
 
                 // 接触点到刚体A质心的距离
-                contact.offsetA = contact.position.sub(bodyA.position),
+                contact.offsetA = contact.position.sub(bodyA.position);
                 // 接触点到刚体B质心的距离
                 contact.offsetB = contact.position.sub(bodyB.position);
                 
@@ -115,11 +110,79 @@ export class ContactConstraint {
                 invMassTangent += bodyA.invInertia * (r1.dot(r1) - rt1 * rt1);
                 invMassTangent += bodyB.invInertia * (r2.dot(r2) - rt2 * rt2);
 
-                // 保存 J(M^-1)(J^T)得倒数
+                let bias = (1 / dt) * Math.max(0, contact.depth - this.slop);
+
+                // 保存 J(M^-1)(J^T)的倒数
                 contact.shareNormal = 1 / invMassNormal;
                 contact.shareTangent = 1 / invMassTangent;
+                contact.velocityBias = this.biasFactor * bias;
+                contact.positionCorrectiveImpulse = contact.velocityBias * manifold.restitution / invMassNormal;
+            }
+        }
+    }
 
-                contact.bias = this.biasFactor * (1 / dt) * Math.max(0, contact.depth - this.slop);
+    /**
+     * 修正位置约束
+     * @param manifolds 
+     */
+    solvePosition(manifolds: Manifold[]) {
+        let manifold: Manifold,
+            collision: Collision,
+            contact: Contact,
+            bodyA: Body,
+            bodyB: Body,
+            normal: Vector,
+            i, j;
+
+        for (i = 0; i < manifolds.length; ++i) {
+            manifold = manifolds[i];
+
+            if(!manifold.isActive) continue;
+
+            collision = manifold.collision;
+            normal = collision.normal;
+            bodyA = collision.bodyA;
+            bodyB = collision.bodyB;
+
+            for(j = 0; j < collision.contacts.length; j++) {
+                contact = collision.contacts[j];
+
+                let positionCorrectiveImpulse = normal.scl(contact.positionCorrectiveImpulse, _tempVector4);
+
+                bodyA.applyImpulse(positionCorrectiveImpulse, contact.offsetA);
+                bodyB.applyImpulse(positionCorrectiveImpulse.inv(positionCorrectiveImpulse), contact.offsetB);
+            }
+        }
+    }
+
+    /**
+     * 求解速度约束预处理
+     * @param manifolds 碰撞流形
+     * @param dt 步长
+     */
+    preSolveVelocity(manifolds: Manifold[]) {
+        let manifold: Manifold,
+            collision: Collision,
+            contact: Contact,
+            bodyA: Body,
+            bodyB: Body,
+            normal: Vector,
+            tangent: Vector,
+            i, j;
+
+        for (i = 0; i < manifolds.length; ++i) {
+            manifold = manifolds[i];
+
+            if(!manifold.isActive) continue;
+
+            collision = manifold.collision;
+            normal = collision.normal;
+            tangent = collision.tangent;
+            bodyA = collision.bodyA;
+            bodyB = collision.bodyB;
+
+            for(j = 0; j < collision.contacts.length; j++) {
+                contact = collision.contacts[j];
 
                 // warm start
                 if(contact.normalImpulse !== 0 || contact.tangentImpulse !== 0) {
@@ -137,13 +200,13 @@ export class ContactConstraint {
     }
     
     /**
-     * 正式处理
+     * 求解速度约束
      * 使用sequential impulse进行快速收敛
      * 参考：https://kevinyu.net/2018/01/17/understanding-constraint-solver-in-physics-engine/
      * @param manifolds
      * @private dt
      */
-    solveVelocity(manifolds: Manifold[], dt: number) {
+    solveVelocity(manifolds: Manifold[]) {
         let manifold: Manifold,
             collision: Collision,
             contact: Contact,
@@ -185,7 +248,7 @@ export class ContactConstraint {
                 // 计算法向相对速度
                 relativeNormalVelocity = normal.dot(relativeVelocity);
                 // 计算法向冲量
-                normalImpulse = manifold.restitution * (relativeNormalVelocity + contact.bias) * contact.shareNormal;
+                normalImpulse = (relativeNormalVelocity + contact.velocityBias) * contact.shareNormal;
 
                 // sequential impulse方法，收敛法向冲量
                 let oldNormalImpulse = contact.normalImpulse;
