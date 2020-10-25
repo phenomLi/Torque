@@ -50,20 +50,14 @@ export class TorqueWorld {
     }
 
     /**
-     * 克隆刚体
-     * @param body 
-     */
-    clone(body: Body): Body {
-        return null;
-    }
-
-    /**
      * 设置引擎参数
      * @param opt 
      */
     setEngineOption(opt: EngineOpt) {
         this.engine.setOption(opt);
     }
+
+    addConstraint(type: string, options) { }
 
     /**
      * 绑定沟子事件

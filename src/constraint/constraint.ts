@@ -1,8 +1,6 @@
 
 
 
-
-
 export class Constraint {
     // 速度求解迭代次数
     protected velocitySolverIterations: number;

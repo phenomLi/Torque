@@ -22,6 +22,9 @@ export type Axis = {
 };
 
 
+let i = 0;
+
+
 // 顶点操作工具
 export const Vertices = {
 
@@ -219,6 +222,8 @@ export const Vertices = {
         }
     },
 
+
+
     /**
      * 将凹多边形分解为多个子凸多边形
      * @param vertexList
@@ -233,49 +238,67 @@ export const Vertices = {
             vDiv: Vector,
             dividePointA: Vector,
             dividePointB: Vector,
-            len = vertexList.length, i, j, cur, next, next2, 
+            len = vertexList.length, 
+            i, j, cur, next, next2, next3,
             flag = false;
+
+        i++;
 
         for(i = 0 ; i < len; i++) {
             cur = i;
             next = (i + 1) % len;
             next2 = (i + 2) % len;
+            next3 = (i + 3) % len;
 
             xAxis = vertexList[next].sub(vertexList[cur]); 
             vTest = vertexList[next2].sub(vertexList[cur]);
 
-            if(xAxis.cro(vTest) < 0) {
-                for(j = i + 3; j < len; j++) {
-                    vDiv = vertexList[j].sub(vertexList[cur]);
-                    if(xAxis.cro(vDiv) > 0) {
-                        flag = true;
-                        break;
-                    }
+            j = next3;
+
+            do {   
+                vDiv = vertexList[j].sub(vertexList[cur]);
+
+                if(xAxis.cro(vDiv) * xAxis.cro(vTest) <= 0) {
+                    flag = true;
+                    break;
                 }
 
-                if(flag) break;
-            }
+                j = (j + 1) % len;
+            } while(j !== i);
+
+            if(flag) break;
         }
 
         // 获取两个分割点
         dividePointA = vertexList[next],
         dividePointB = vertexList[j];
 
+        if(j > next2) {
+            vertexListB = vertexList.splice(next2, j - next2);
+        }
+        else {
+            vertexListB = [];
+            vertexListB.push(...vertexList.splice(next2, len - (next2 - 1)));
+            vertexListB.push(...vertexList.splice(0, j));
+        }
+
         // 拆分为两个多边形vertexListA和vertexListB
-        vertexListB = vertexList.splice(next2, j - next2);
         vertexListA = vertexList;
         vertexListB.unshift(dividePointA);
         vertexListB.push(dividePointB);
 
+        vertexListA = Vertices.filterCollinearVertex(vertexListA);
+        vertexListB = Vertices.filterCollinearVertex(vertexListB);
+
         // 检测拆分出来的两个多边形是否是凹多边形，若果是，继续递归拆分
-        if(Vertices.isConcave(vertexListA)) {
+        if(vertexListA.length > 3 && Vertices.isConcave(vertexListA)) {
             parts.push(...Vertices.split(vertexListA));
         }
         else {
             parts.push(vertexListA);
         }
 
-        if(Vertices.isConcave(vertexListB)) {
+        if(vertexListB.length > 3 && Vertices.isConcave(vertexListB)) {
             parts.push(...Vertices.split(vertexListB));
         }
         else {
@@ -465,7 +488,7 @@ export const Vertices = {
         }
 
         for(i = 0; i < removeIndex.length; i++) {
-            vertexList.splice(removeIndex[i], 1);
+            vertexList.splice(removeIndex[i] - i, 1);
         }
 
         return vertexList;

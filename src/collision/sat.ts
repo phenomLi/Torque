@@ -29,7 +29,7 @@ export type MinOverlap = {
 export class SAT {
     // 是否开启SAT加速
     private enableSATBoost: boolean = true;
-    private reuseCollisionThreshold: number = 0.05;
+    private reuseCollisionThreshold: number = 0.1;
 
     constructor(opt: EngineOpt) {
         Util.merge(this, opt);

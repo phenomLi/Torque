@@ -40,6 +40,8 @@ export class BodiesFactory {
         let vertices = v.map(vertex => new Vector(vertex[0], vertex[1])),
             options = opt || <PolygonOpt & CompositeOpt>{ origin: new Vector(x, y) };
 
+        Vertices.filterCollinearVertex(vertices);
+
         // 若输入的顶点列表是凹多边形，则将其拆分为由凸多边形组合成的组合图形
         if(Vertices.isConcave(vertices)) {
             let vertexLists = Vertices.split(vertices),
@@ -49,7 +51,7 @@ export class BodiesFactory {
             for(let i = 0; i < vertexLists.length; i++) {
                 polygons.push(new Polygon({
                     origin: new Vector(x, y),
-                    vertices: Vertices.filterCollinearVertex(vertexLists[i])
+                    vertices: vertexLists[i]
                 }));
             }
 

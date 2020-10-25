@@ -2,9 +2,9 @@
 function stackWorld(canvas) {
     const canvasWidth = canvas.offsetWidth,
           canvasHeight = canvas.offsetHeight,
-          vector = Torque.math.vector,
+          vector = Torque.vector,
           renderer = new Renderer(canvas, canvasWidth, canvasHeight, {
-            gravity: vector(0, 9),
+            gravity: vector(0, 9.8),
             enableSleeping: true,
             enableCache: true,
             enableSATBoost: true,

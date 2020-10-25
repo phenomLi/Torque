@@ -4,7 +4,8 @@ const examples = [
     ['运动刚体', kineticWorld],
     ['复合刚体', compositeWorld],
     ['压力测试', stressWorld],
-    ['真空', vacuumWorld]
+    ['失重', weightlessWorld],
+    ['凹多边形', concaveWorld]
 ];
 
 let renderer = null,

@@ -7,7 +7,7 @@ import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
 import { ContactConstraint } from "../constraint/contact";
-import { PinConstraint } from "../constraint/pin";
+
 
 
 /**
@@ -84,8 +84,6 @@ export class Engine {
     manifoldTable: ManifoldTable;
     // 接触约束求解器
     contactConstraint: ContactConstraint;
-    // 图钉约束求解器
-    pinConstraint: PinConstraint;
     // 休眠管理器
     sleeping: Sleeping;
     // 引力缩放因子

@@ -7,7 +7,7 @@ import { Bound } from "../common/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
 import { Axis } from "../common/vertices";
-import { Pin } from "../constraint/pin";
+
 
 
 
@@ -145,8 +145,6 @@ export class Body {
     parts: Body[];
     // 与该刚体碰撞的刚体列表
     contactBodies: { [key: string]: Body };
-    // 图钉约束
-    pinConstraint: Pin;
     // 方法
     methods: BodyOpt['methods'];
     // 渲染函数
@@ -173,7 +171,6 @@ export class Body {
         this.torque = 0;
         this.friction = 10;
         this.restitution = 0.8;
-        this.pinConstraint = null;
         this.static = false;
         this.kinetic = false
         this.ignoreGravity = false;
