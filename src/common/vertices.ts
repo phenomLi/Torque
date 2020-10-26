@@ -258,7 +258,7 @@ export const Vertices = {
             do {   
                 vDiv = vertexList[j].sub(vertexList[cur]);
 
-                if(xAxis.cro(vDiv) * xAxis.cro(vTest) <= 0) {
+                if(xAxis.cro(vDiv) * xAxis.cro(vTest) < 0) {
                     flag = true;
                     break;
                 }
