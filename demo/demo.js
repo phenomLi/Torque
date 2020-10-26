@@ -86,7 +86,7 @@ const vm = new Vue({
             else {
                 switch (this.mouseStatus) {
                     case 'circle': {
-                        renderer.createCircle(x, y, renderer.getRandom(30, 20), { 
+                        renderer.createCircle(x, y, renderer.getRandom(25, 15), { 
                             ...options
                         });
                         break;
@@ -98,7 +98,7 @@ const vm = new Vue({
                         break;
                     }
                     case 'play': {
-                        renderer.createIsogon(x, y, renderer.getRandom(40, 20), renderer.getRandom(20, 4), { 
+                        renderer.createIsogon(x, y, renderer.getRandom(30, 20), renderer.getRandom(16, 4), { 
                             ...options
                             });
                         break;

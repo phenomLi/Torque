@@ -251,13 +251,16 @@ export class ContactConstraint extends Constraint {
                 normalImpulse = (relativeNormalVelocity + contact.velocityBias) * contact.shareNormal;
 
                 // sequential impulse方法，收敛法向冲量
-                let oldNormalImpulse = contact.normalImpulse;
-                contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
-                normalImpulse = contact.normalImpulse - oldNormalImpulse;
+                // let oldNormalImpulse = contact.normalImpulse;
+                // contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
+                // normalImpulse = contact.normalImpulse - oldNormalImpulse;
+
+                normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0) - contact.normalImpulse;
 
                 // 应用冲量
                 impulse.x = normal.x * normalImpulse;
                 impulse.y = normal.y * normalImpulse;
+                contact.normalImpulse += normalImpulse;
 
                 bodyA.applyImpulse(impulse, contact.offsetA);
                 bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
@@ -278,13 +281,15 @@ export class ContactConstraint extends Constraint {
                 maxFriction = manifold.friction * contact.normalImpulse;
 
                 // sequential impulse方法，收敛切向冲量
-                let oldTangentImpulse = contact.tangentImpulse;
-                contact.tangentImpulse = Util.clamp(contact.tangentImpulse + tangentImpulse, -maxFriction, maxFriction);
-                tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
+                // let oldTangentImpulse = contact.tangentImpulse;
+                // contact.tangentImpulse = Util.clamp(contact.tangentImpulse + tangentImpulse, -maxFriction, maxFriction);
+                // tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
+                tangentImpulse = Math.max(-maxFriction, Math.min(maxFriction, contact.tangentImpulse + tangentImpulse)) - contact.tangentImpulse;
 
                 // 应用冲量
                 impulse.x = tangent.x * tangentImpulse;
                 impulse.y = tangent.y * tangentImpulse;
+                contact.tangentImpulse += tangentImpulse;
 
                 bodyA.applyImpulse(impulse, contact.offsetA);
                 bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
