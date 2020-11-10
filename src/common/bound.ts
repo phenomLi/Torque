@@ -148,7 +148,7 @@ export class Bound {
      * @param bound 
      */
     isIntersect(bound: Bound): boolean {
-        return (this.min.x < bound.max.x && this.max.x > bound.min.x) && (this.min.y < bound.max.y && bound.min.y < this.max.y);
+        return (this.min.x <= bound.max.x && this.max.x >= bound.min.x) && (this.min.y <= bound.max.y && bound.min.y <= this.max.y);
     }
 
     /**

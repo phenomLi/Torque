@@ -53,6 +53,8 @@ export class Detector {
         // 粗阶段检测
         broadPhasePairs = this.broadPhase(bodies);
 
+        // console.log(broadPhasePairs);
+
         let start = performance.now();
 
         // 细阶段检测
@@ -146,7 +148,7 @@ export class Detector {
                 if(!this.canCollide(bodies[i], bodies[j])) continue;
 
                 // 一个个对比包围盒是否相交
-                if(boundA.min.y < boundB.max.y && boundB.min.y < boundA.max.y) {
+                if(boundA.min.y <= boundB.max.y && boundB.min.y <= boundA.max.y) {
                     broadPhasePairList.push({
                         bodyA: bodies[i],
                         bodyB: bodies[j],

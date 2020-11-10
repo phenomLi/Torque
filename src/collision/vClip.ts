@@ -1,6 +1,6 @@
 import { Edge, VertexList } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
-import { Contact } from "../constraint/contact";
+import { Contact, ContactConstraint } from "../constraint/contact";
 import { MinOverlap } from "./sat";
 
 
@@ -13,11 +13,13 @@ import { MinOverlap } from "./sat";
 function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, oppositeClosestIndex: number): Edge {
     let prev: Vector, cur: Vector, next: Vector, 
         index: number = oppositeClosestIndex,
-        edge: Edge = { start: null, end: null };
+        prevIndex = index === 0? oppositeVertexList.length - 1: index - 1,
+        nextIndex = (index + 1) % oppositeVertexList.length,
+        edge: Edge = { start: null, end: null, index: [-1, -1] };
    
     cur = oppositeVertexList[index];
-    prev = oppositeVertexList[index === 0? oppositeVertexList.length - 1: index - 1];
-    next = oppositeVertexList[(index + 1) % oppositeVertexList.length];
+    prev = oppositeVertexList[prevIndex];
+    next = oppositeVertexList[nextIndex];
     cur.sub(prev, _tempVector1);
     cur.sub(next, _tempVector2);
 
@@ -27,10 +29,12 @@ function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, opposi
     if(d1 < d2) {
         edge.start = prev;
         edge.end = cur;
+        edge.index = [prevIndex, index];
     }
     else {
         edge.start = cur;
         edge.end = next;
+        edge.index = [index, nextIndex];
     }
     
     return edge;
@@ -46,11 +50,11 @@ function clipSide(incEdge: Edge, refV: Vector, d: number): number {
     let d1 = incEdge.start.dot(refV) - d,
         d2 = incEdge.end.dot(refV) - d;
 
-    if(d1 > 0) {
+    if(d1 >= 0) {
         return 0;
     }
 
-    if(d2 > 0) {
+    if(d2 >= 0) {
         return 1;
     }
         
@@ -69,9 +73,9 @@ function clipSide(incEdge: Edge, refV: Vector, d: number): number {
 export function vClip(minOverlap: MinOverlap): Contact[] {
     let axis = minOverlap.axis,
         normal = axis.value,
-        depth: number = minOverlap.value,
         incEdge: Edge,
         refEdge: Edge,
+        ids = [],
         contacts: Contact[] = [];
 
     incEdge = findIncidentEdge(<VertexList>axis.opposite, normal, minOverlap.oppositeClosestIndex);
@@ -88,32 +92,41 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
         removeIndex: number = -1;
 
     if(d1 <= 0) {
+        ids[0] = [incEdge.index[0], incEdge.index[0]];
         incVertex[0] = incEdge.start;
     }
 
     if(d2 <= 0) {
+        ids[1] = [incEdge.index[1], incEdge.index[1]];
         incVertex[1] = incEdge.end;
     }
+
+
 
     // ------------------------------------- 接下来进行两边筛选 -------------------
     removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
     if(removeIndex !== -1 && incVertex[removeIndex]) {
+        ids[removeIndex][0] = refEdge.index[1];
         incVertex[removeIndex] = refEdge.end;
     }
 
     removeIndex = clipSide(incEdge, refV.inv(refV), refEdge.start.dot(refV));
     if(removeIndex !== -1 && incVertex[removeIndex]) {
+        ids[removeIndex][0] = refEdge.index[0];
         incVertex[removeIndex] = refEdge.start;
     }
 
+
+
     if(incVertex[0]) {
-        contacts.push(new Contact(incVertex[0], Math.abs(d1)));
+        contacts.push(ContactConstraint.create(ids[0], incVertex[0], Math.abs(d1)));
     }
 
     if(incVertex[1]) {
-        contacts.push(new Contact(incVertex[1], Math.abs(d2)));
+        contacts.push(ContactConstraint.create(ids[1], incVertex[1], Math.abs(d2)));
     }
         
+
     return contacts;
 }
 

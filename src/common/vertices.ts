@@ -1,6 +1,5 @@
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
 import { Bound } from "./bound";
-import { Body } from "../body/body";
 import { Circle } from "../body/circle";
 
 
@@ -8,6 +7,7 @@ import { Circle } from "../body/circle";
 export type VertexList = Array<Vector>;
 // 边类型
 export type Edge = {
+    index: [number, number];
     start: Vector;
     end: Vector;
 };
@@ -21,8 +21,6 @@ export type Axis = {
     edge: Edge;
 };
 
-
-let i = 0;
 
 
 // 顶点操作工具
@@ -137,6 +135,7 @@ export const Vertices = {
                     supportVertexIndex: null,
                     oppositeVertexIndex: null,
                     edge: {
+                        index: [i, j],
                         start: v[i],
                         end: v[j]
                     }

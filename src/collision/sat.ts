@@ -2,7 +2,7 @@ import { Vector, _tempVector1, _tempVector4 } from "../math/vector";
 import { Axis, Vertices } from "../common/vertices";
 import { Arcs } from "../common/arcs";
 import { Collision } from "./manifold";
-import { Contact } from "../constraint/contact";
+import { Contact, ContactConstraint } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
@@ -29,7 +29,7 @@ export type MinOverlap = {
 export class SAT {
     // 是否开启SAT加速
     private enableSATBoost: boolean = true;
-    private reuseCollisionThreshold: number = 0.1;
+    private reuseCollisionThreshold: number = 0.7;
 
     constructor(opt: EngineOpt) {
         Util.merge(this, opt);
@@ -57,13 +57,15 @@ export class SAT {
                 return collision;
             }
 
-            let prevContacts = collision.contacts;
-            for(let i = 0; i < prevContacts.length; i++) {
-                prevContacts[i].depth = minOverlap.value;
-            }
+            collision.prevContacts = collision.contacts;
+            collision.isReuse = true;
         }
         // 若不能用缓存，则进行完整的测试
         else {
+            if(prevCollision) {
+                prevCollision.isReuse = false;
+            }
+
             collision = new Collision();
             axes = this.getTestAxes(poly, geometry);
             minOverlap = this.detect(poly, geometry, axes);
@@ -73,6 +75,11 @@ export class SAT {
                 collision.collide = false;
                 return collision;
             }
+
+            collision.partA = poly;
+            collision.partB = geometry;
+            collision.bodyA = poly.parent || poly;
+            collision.bodyB = geometry.parent || geometry;
 
             let axis = minOverlap.axis,
                 normal = this.reviseNormal(minOverlap.axis.value, poly, geometry);
@@ -88,16 +95,10 @@ export class SAT {
             collision.oppositeClosestIndex = minOverlap.oppositeClosestIndex;
             collision.normal = normal;
             collision.tangent = normal.nor();
-
-            collision.partA = poly;
-            collision.partB = geometry;
-            collision.bodyA = poly.parent || poly;
-            collision.bodyB = geometry.parent || geometry;
-
-            // 计算碰撞点
-            collision.contacts = this.findContacts(geometry, minOverlap);
         }
 
+        // 计算碰撞点
+        collision.contacts = this.findContacts(geometry, minOverlap, collision.normal);
         collision.collide = true;
 
         return collision;
@@ -112,6 +113,18 @@ export class SAT {
     circleCollideCircle(circleA: Circle, circleB: Circle, prevCollision: Collision): Collision {
         let axis: Vector = circleA.position.sub(circleB.position, _tempVector1),
             overlaps: number = (circleA.radius + circleB.radius) - axis.len(),
+            minOverlap: MinOverlap = {
+                value: overlaps,
+                axis: {
+                    value: axis,
+                    origin: null,
+                    opposite: null,
+                    edge: null,
+                    supportVertexIndex: -1,
+                    oppositeVertexIndex: -1
+                },
+                oppositeClosestIndex: -1
+            },
             collision: Collision = new Collision(),
             normal: Vector;
 
@@ -122,8 +135,9 @@ export class SAT {
         }
 
         normal = this.reviseNormal(axis, circleA, circleB).nol();
+        minOverlap.axis.value = normal;
 
-        collision.axis = null;
+        collision.axis = minOverlap.axis;
         collision.partA = circleA;
         collision.partB = circleB;
         collision.bodyA = circleA.parent || circleA;
@@ -132,9 +146,7 @@ export class SAT {
         collision.normal = normal;
         collision.tangent = normal.nor();
 
-        let position = circleA.position.loc(normal.inv(_tempVector1), circleA.radius - overlaps / 2);
-
-        collision.contacts = [new Contact(position, overlaps)];
+        collision.contacts = this.findContacts(circleB, minOverlap, normal);
         collision.collide = true;
 
         return collision;
@@ -403,9 +415,9 @@ export class SAT {
      * 求解碰撞点
      * @param geometry 
      * @param minOverlap
-     * @param prevContacts
+     * @param normal
      */
-    private findContacts(geometry: Body, minOverlap: MinOverlap): Contact[] {
+    private findContacts(geometry: Body, minOverlap: MinOverlap, normal: Vector): Contact[] {
         if(geometry.type === bodyType.polygon) {
             if(this.enableSATBoost) {
                 return vClip(minOverlap);
@@ -415,8 +427,8 @@ export class SAT {
             }
         }
         else {
-            let vertex = geometry.position.loc(minOverlap.axis.value, (<Circle>geometry).radius - minOverlap.value / 2);
-            return [new Contact(vertex, minOverlap.value)];
+            let vertex = geometry.position.loc(normal, (<Circle>geometry).radius - minOverlap.value / 2);
+            return [ContactConstraint.create(null, vertex, minOverlap.value)];
         }
     }
 };

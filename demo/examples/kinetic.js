@@ -53,6 +53,10 @@ function kineticWorld(canvas) {
         rotateRect = renderer.createRect(900, 200, 50, 50, {
         kinetic: true,
         ...options
+    }),
+        rotateCircle = renderer.createCircle(400, 200, 50, {
+        kinetic: true,
+        ...options
     });
     
     let counter = 0;
@@ -62,6 +66,7 @@ function kineticWorld(canvas) {
     });
     
     rotateRect.setAngularVelocity(5);
+    rotateCircle.setAngularVelocity(3);
     
     return renderer;
 }

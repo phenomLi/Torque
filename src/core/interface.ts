@@ -1,11 +1,18 @@
 import { Body } from "../body/body";
 import { Util } from "../common/util";
+import { Matrix } from "../math/matrix";
+import { Vector } from "../math/vector";
+import { BodiesFactory } from "./bodiesFactory";
 import { Engine, EngineOpt } from "./engine";
 
 
 
 // Torque主类
 export class TorqueWorld {
+    public static body: BodiesFactory;
+    public static vector: (x: number, y: number) => Vector;
+    public static matrix: (r1: Vector, r2: Vector) => Matrix;
+
     private engine: Engine;
 
     constructor(width: number, height: number, opt?: EngineOpt) {

@@ -1,5 +1,5 @@
 import { Body } from "../body/body";
-import { Vector } from "../math/vector";
+import { Vector, _tempVector3 } from "../math/vector";
 import { Util } from "../common/util";
 import { TimeStepper } from "./timeStepper";
 import { Detector } from "../collision/detector";
@@ -24,7 +24,7 @@ export interface EngineOpt {
     deltaFixed: boolean;
 
     // 是否开启碰撞检测
-    enableColllisionDetection: boolean;
+    enableCollisionDetection: boolean;
     // 是否开启碰撞求解
     enableCollisionResolve: boolean;
     // 是否开启休眠
@@ -96,7 +96,7 @@ export class Engine {
         this.height = height || 0;
         
         this.gravity = new Vector(0, 9);
-        this.airFriction = 0.05;
+        this.airFriction = 0;
 
         this.enableSleeping = true;
         this.enableCollisionDetection = true;
@@ -139,21 +139,21 @@ export class Engine {
         }
 
         for(let i = 0; i < this.bodies.length; i++) {
-            let body = this.bodies[i];
+            let body = this.bodies[i],
+                gravityForce = _tempVector3;
 
-            if(body.ignoreGravity) continue;
+            if(body.ignoreGravity) {
+                continue;
+            }
 
-            body.force.x += this.gravity.x * body.mass * this.gravityScaler;
-            body.force.y += this.gravity.y * body.mass * this.gravityScaler;
+            gravityForce.x = this.gravity.x * body.mass * (1 / dt / 2);
+            gravityForce.y = this.gravity.y * body.mass * (1 / dt / 2);
 
             // 应用受力
-            body.applyForce(body.force);
+            body.applyForce(gravityForce);
             // 积分受力
             body.integrateForces(dt);
         }
-
-        // 解决所有约束
-        // this.resolver.solveConstraint();
 
         // 是否开启碰撞检测
         if(this.enableCollisionDetection) {

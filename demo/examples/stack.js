@@ -46,9 +46,20 @@ function stackWorld(canvas) {
             }
         }
     }
+
+    function createPyramid(level, x, w) {
+        for(let i = 0; i < level; i++) {
+            for(let j = 0; j < level - i; j++) {
+                renderer.createRect(x + i * (w / 2) + j * w, canvasHeight - 30 - w * (i + 1), w, w, {
+                    ...options
+                });
+            }
+        }
+    }
     
     createWall(canvasWidth, canvasHeight, 30, {...options, static: true});
-    createStack(5, 5, 100, 30);
+    createPyramid(8, 500, 40);
+    createStack(7, 7, 100, 40);
     
     return renderer;
 }

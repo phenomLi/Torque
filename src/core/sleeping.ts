@@ -21,7 +21,7 @@ export class Sleeping {
 
     constructor(opt: EngineOpt) {
         this.sleepDelayThreshold = 60;
-        this.sleepMotionThreshold = 0.0008;
+        this.sleepMotionThreshold = 0.0006;
         this.wakeMotionThreshold = 0.7;
 
         Util.merge(this, opt);

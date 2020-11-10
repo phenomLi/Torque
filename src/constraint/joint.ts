@@ -4,7 +4,7 @@ import { Util } from "../common/util";
 
 
 
-export interface SpringOptions {
+export interface JointOptions {
     target?: [Vector, Vector];
     body?: [Body, Body];
     stiffness?: number;
@@ -13,7 +13,7 @@ export interface SpringOptions {
 
 
 
-export class Spring {
+export class Joint {
     id: number;
     body: [Body, Body];
     target: [Vector, Vector];
@@ -21,7 +21,7 @@ export class Spring {
     damping: number;
     length: number;
 
-    constructor(options: SpringOptions) {
+    constructor(options: JointOptions) {
         this.body = options.body;
         this.target = options.target;
 
@@ -48,12 +48,12 @@ export class Spring {
 /**
  * 弹簧（距离）约束
  */
-export class SpringConstraint {
-    create(opt: SpringOptions): Spring {
-        return new Spring(opt);
+export class JointConstraint {
+    create(opt: JointOptions): Joint {
+        return new Joint(opt);
     }
 
-    solveVelocity(spring: Spring) {
+    solveVelocity(spring: Joint) {
         let bodyA = spring.body[0],
             bodyB = spring.body[1],
             targetA = spring.target[0],

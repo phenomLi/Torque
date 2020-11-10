@@ -1,17 +1,9 @@
 import { Body } from "../body/body";
-import { Vector } from "../math/vector";
+import { Vector, _tempVector3 } from "../math/vector";
 import { Util } from "../common/util";
 import { Axis } from "../common/vertices";
 import { Contact } from "../constraint/contact";
-import { Polygon } from "../body/polygon";
-import { Circle } from "../body/circle";
 
-
-/**
- * 碰撞信息，碰撞流形，接触点
- */
-
-// export type Geometry = Polygon | Circle;
 
 
 /**
@@ -42,10 +34,14 @@ export class Collision {
     tangent: Vector;
     // 接触点
     contacts: Contact[];
+    // 上一批接触点
+    prevContacts: Contact[];
     // 对位多边形在法线方向上最接近本多边形的顶点的下标
     oppositeClosestIndex: number;
     // 是否发生了碰撞
-    collide: boolean;
+    collide: boolean = false;
+    // 该碰撞是否是复用状态
+    isReuse: boolean = false;
 };
 
 
@@ -104,8 +100,6 @@ export class Manifold {
      * @param timeStamp 时间戳
      */
     update(collision: Collision, timeStamp: number) {
-        this.collision = collision;
-
         // 如果该碰撞对真的发生了碰撞
         if(collision.collide) {
             let bodyA: Body, bodyB: Body;
@@ -117,12 +111,15 @@ export class Manifold {
             this.restitution = (bodyA.restitution + bodyB.restitution) / 2;
             this.inverseMass = bodyA.invMass + bodyB.invMass;
 
+            this.warmStart(collision);
             this.toggleActive(true, timeStamp);
         }
         // 否则
         else {
             this.isActive && this.toggleActive(false, timeStamp);
         }
+
+        this.collision = collision;
     }
 
     /**
@@ -136,6 +133,26 @@ export class Manifold {
         if(active) {
             this.timeUpdated = timeStamp;
         }
+    }
+
+    /**
+     * 热启动
+     * @param collision 
+     */
+    warmStart(collision: Collision) {
+        let oldContacts = collision.prevContacts || this.collision.contacts,
+            newContacts = collision.contacts;
+
+        for(let i = 0; i < newContacts.length; i++) {
+            for(let j = 0; j < oldContacts.length; j++) {
+                if(newContacts[i].equal(oldContacts[j])) {
+                    newContacts[i].normalImpulse = oldContacts[j].normalImpulse;
+                    newContacts[i].tangentImpulse = oldContacts[j].tangentImpulse;
+                }
+            }
+        }
+
+        collision.prevContacts = newContacts;
     }
 }
 

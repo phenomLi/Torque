@@ -1,6 +1,6 @@
-import { Axis, VertexList, Vertices } from "../common/vertices";
+import { VertexList, Vertices } from "../common/vertices";
 import { Vector, _tempVector3 } from "../math/vector";
-import { Contact } from "../constraint/contact";
+import { Contact, ContactConstraint } from "../constraint/contact";
 import { MinOverlap } from "./sat";
 
 
@@ -61,7 +61,7 @@ export function vClosest(minOverlap: MinOverlap): Contact[] {
         // 查看这些点是否在多边形B内部
         if(Vertices.isContains(vertexListB, testVertices[i])) {
             // 如果是，则这个点记为一个碰撞点
-            contacts.push(new Contact(testVertices[i], depth));
+            contacts.push(ContactConstraint.create(null, testVertices[i], depth));
         } 
     }
 
@@ -82,13 +82,13 @@ export function vClosest(minOverlap: MinOverlap): Contact[] {
 
     for(i = 0; i < testVertices.length; i++) {
         if(Vertices.isContains(vertexListA, testVertices[i])) {
-            contacts.push(new Contact(testVertices[i], depth));
+            contacts.push(ContactConstraint.create(null, testVertices[i], depth));
         }
     }
 
     // 边界情况：即没有碰撞点的情况
     if(contacts.length < 1) {
-        contacts.push(new Contact(vertexListB[index], depth));
+        contacts.push(ContactConstraint.create(null, vertexListB[index], depth));
     }
 
     return contacts;

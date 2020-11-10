@@ -169,7 +169,7 @@ export class Body {
         this.invInertia = 0;
         this.force = new Vector(0, 0);
         this.torque = 0;
-        this.friction = 10;
+        this.friction = 0.2;
         this.restitution = 0.8;
         this.static = false;
         this.kinetic = false
@@ -463,14 +463,14 @@ export class Body {
         this.velocity.y = airFriction * this.velocity.y;
         this.angularVelocity = airFriction * this.angularVelocity;
 
-        this.velocity.x += dt * this.force.x * this.invMass;
-        this.velocity.y += dt * this.force.y * this.invMass;
-        this.angularVelocity += dt * this.torque * this.invInertia; 
+        this.velocity.x += this.force.x * this.invMass * dt;
+        this.velocity.y += this.force.y * this.invMass * dt;
+        this.angularVelocity += this.torque * this.invInertia * dt; 
     }
 
     /**
      * 积分速度
-     * - 使用隐式欧拉积分
+     * - 使用半隐式欧拉积分
      * @param dt 
      */
     integrateVelocities(dt: number) {

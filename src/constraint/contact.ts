@@ -1,12 +1,13 @@
 import { Body } from "../body/body";
 import { Vector, _tempVector2, _tempVector1, _tempVector3, _tempVector4 } from "../math/vector";
-import { Util } from "../common/util";
 import { Manifold, Collision } from "../collision/manifold";
 import { Constraint } from "./constraint";
+import { Util } from "../common/util";
 
 
 // 接触约束
 export class Contact {
+    id: [number, number];
     position: Vector;
     shareNormal: number;
     shareTangent: number;
@@ -18,7 +19,8 @@ export class Contact {
     positionCorrectiveImpulse: number;
     velocityBias: number;
 
-    constructor(vertex: Vector, depth: number) {
+    constructor(id: [number, number], vertex: Vector, depth: number) {
+        this.id = id;
         this.position = vertex;
         this.shareNormal = 0;
         this.shareTangent = 0;
@@ -27,6 +29,30 @@ export class Contact {
         this.positionCorrectiveImpulse = 0;
         this.depth = depth;
         this.velocityBias = 0;
+    }
+
+    /**
+     * 判断两个碰撞点是否相等
+     * @param contact 
+     */
+    equal(contact: Contact): boolean {
+        if(this.id === null || contact.id === null) {
+            return false;
+        }
+
+        if(this.id === contact.id) {
+            return true;
+        }
+
+        if(this.id[0] === contact.id[0] && this.id[1] === contact.id[1]) {
+            return true;
+        }
+
+        if(this.id[0] === contact.id[1] && this.id[1] === contact.id[0]) {
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -39,18 +65,21 @@ export class ContactConstraint extends Constraint {
     private slop: number;
     // 偏移因子
     private biasFactor: number;
+    // 静止阈值
+    private restFactor: number;
 
     constructor() {
         super();
 
         this.velocitySolverIterations = 20;
         this.positionSolverIterations = 1;
-        this.slop = 0.02;
+        this.slop = 0.01;
         this.biasFactor = 0.2;
+        this.restFactor = 24;
     }
 
-    create(vertex: Vector, depth: number): Contact {
-        return new Contact(vertex, depth);
+    static create(id: [number, number], vertex: Vector, depth: number): Contact {
+        return new Contact(id, vertex, depth);
     }
 
     solve(manifolds: Manifold[], dt: number) {
@@ -250,17 +279,23 @@ export class ContactConstraint extends Constraint {
                 // 计算法向冲量
                 normalImpulse = (relativeNormalVelocity + contact.velocityBias) * contact.shareNormal;
 
-                // sequential impulse方法，收敛法向冲量
-                // let oldNormalImpulse = contact.normalImpulse;
-                // contact.normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0);
-                // normalImpulse = contact.normalImpulse - oldNormalImpulse;
+                let frictionNormalImpulse = contact.normalImpulse;
+                if(collision.isReuse && relativeNormalVelocity < 0 && relativeNormalVelocity ** 2 > this.restFactor) {
+                    contact.normalImpulse = 0;
+                }
+                else {
+                    // sequential impulse方法，收敛法向冲量
+                    let oldNormalImpulse = contact.normalImpulse;
+                    contact.normalImpulse = Math.max(oldNormalImpulse + normalImpulse, 0);
+                    normalImpulse = contact.normalImpulse - oldNormalImpulse;
+                }
 
-                normalImpulse = Math.max(contact.normalImpulse + normalImpulse, 0) - contact.normalImpulse;
+                frictionNormalImpulse += normalImpulse;
+                
 
                 // 应用冲量
                 impulse.x = normal.x * normalImpulse;
                 impulse.y = normal.y * normalImpulse;
-                contact.normalImpulse += normalImpulse;
 
                 bodyA.applyImpulse(impulse, contact.offsetA);
                 bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
@@ -278,18 +313,16 @@ export class ContactConstraint extends Constraint {
                 // 计算切向冲量
                 tangentImpulse = relativeTangentVelocity * contact.shareTangent;
                 // 计算最大摩擦力
-                maxFriction = manifold.friction * contact.normalImpulse;
+                maxFriction = manifold.friction * frictionNormalImpulse;
 
                 // sequential impulse方法，收敛切向冲量
-                // let oldTangentImpulse = contact.tangentImpulse;
-                // contact.tangentImpulse = Util.clamp(contact.tangentImpulse + tangentImpulse, -maxFriction, maxFriction);
-                // tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
-                tangentImpulse = Math.max(-maxFriction, Math.min(maxFriction, contact.tangentImpulse + tangentImpulse)) - contact.tangentImpulse;
+                let oldTangentImpulse = contact.tangentImpulse;
+                contact.tangentImpulse = Util.clamp(oldTangentImpulse + tangentImpulse, -maxFriction, maxFriction);
+                tangentImpulse = contact.tangentImpulse - oldTangentImpulse;
 
                 // 应用冲量
                 impulse.x = tangent.x * tangentImpulse;
                 impulse.y = tangent.y * tangentImpulse;
-                contact.tangentImpulse += tangentImpulse;
 
                 bodyA.applyImpulse(impulse, contact.offsetA);
                 bodyB.applyImpulse(impulse.inv(impulse), contact.offsetB); 
