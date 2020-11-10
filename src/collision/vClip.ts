@@ -2,6 +2,9 @@ import { Edge, VertexList } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
 import { Contact, ContactConstraint } from "../constraint/contact";
 import { MinOverlap } from "./sat";
+import { Circle } from "../body/circle";
+import { Polygon } from "../body/polygon";
+import { Arcs } from "../common/arcs";
 
 
 /**
@@ -12,8 +15,25 @@ import { MinOverlap } from "./sat";
  */
 function findIncidentEdge(oppositeVertexList: VertexList, normal: Vector, oppositeClosestIndex: number): Edge {
     let prev: Vector, cur: Vector, next: Vector, 
-        index: number = oppositeClosestIndex,
-        prevIndex = index === 0? oppositeVertexList.length - 1: index - 1,
+        index: number;
+
+    if(oppositeClosestIndex === null) {
+        let min: number = Infinity,
+            dot: number;
+
+        for(let i = 0; i < oppositeVertexList.length; i++) {
+            dot = oppositeVertexList[i].dot(normal);
+
+            if(dot < min) {
+                min = dot;
+                oppositeClosestIndex = i;
+            }
+        }
+    }
+
+    index = oppositeClosestIndex;
+
+    let prevIndex = index === 0? oppositeVertexList.length - 1: index - 1,
         nextIndex = (index + 1) % oppositeVertexList.length,
         edge: Edge = { start: null, end: null, index: [-1, -1] };
    
@@ -102,7 +122,6 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
     }
 
 
-
     // ------------------------------------- 接下来进行两边筛选 -------------------
     removeIndex = clipSide(incEdge, refV, refEdge.end.dot(refV));
     if(removeIndex !== -1 && incVertex[removeIndex]) {
@@ -129,5 +148,32 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
 
     return contacts;
 }
+
+
+
+
+/**
+ * 多边形与圆形的碰撞点求解算法
+ * @param polygon 
+ * @param circle 
+ * @param normal 
+ * @param depth
+ */
+export function vClipCircle(polygon: Polygon, circle: Circle, normal: Vector, depth: number) {
+    let incEdge: Edge = findIncidentEdge(polygon.vertexList, normal, null),
+        vertex: Vector;
+
+    if(Arcs.isContains(circle, incEdge.start)) {
+        return [ContactConstraint.create(null, incEdge.start, depth)];
+    }
+
+    if(Arcs.isContains(circle, incEdge.end)) {
+        return [ContactConstraint.create(null, incEdge.end, depth)];
+    }
+
+    vertex = circle.position.loc(normal, circle.radius - depth / 2);
+    return [ContactConstraint.create(null, vertex, depth)];
+}
+
 
 

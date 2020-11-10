@@ -6,8 +6,7 @@ import { Contact, ContactConstraint } from "../constraint/contact";
 import { EngineOpt } from "../core/engine";
 import { Util } from "../common/util";
 import { axesFilter } from "./axesFilter";
-import { vClip } from "./vClip";
-import { vClosest } from "./vClosest";
+import { vClip, vClipCircle } from "./vClip";
 import { Polygon } from "../body/polygon";
 import { Circle } from "../body/circle";
 import { Body, bodyType } from "../body/body";
@@ -98,7 +97,7 @@ export class SAT {
         }
 
         // 计算碰撞点
-        collision.contacts = this.findContacts(geometry, minOverlap, collision.normal);
+        collision.contacts = this.findContacts(poly, geometry, minOverlap, collision.normal);
         collision.collide = true;
 
         return collision;
@@ -146,7 +145,9 @@ export class SAT {
         collision.normal = normal;
         collision.tangent = normal.nor();
 
-        collision.contacts = this.findContacts(circleB, minOverlap, normal);
+        let position = circleB.position.loc(normal, circleB.radius - minOverlap.value / 2);
+
+        collision.contacts = [ContactConstraint.create(null, position, minOverlap.value)];
         collision.collide = true;
 
         return collision;
@@ -417,18 +418,12 @@ export class SAT {
      * @param minOverlap
      * @param normal
      */
-    private findContacts(geometry: Body, minOverlap: MinOverlap, normal: Vector): Contact[] {
+    private findContacts(polygon: Polygon, geometry: Body, minOverlap: MinOverlap, normal: Vector): Contact[] {
         if(geometry.type === bodyType.polygon) {
-            if(this.enableSATBoost) {
-                return vClip(minOverlap);
-            }
-            else {
-                return vClosest(minOverlap);
-            }
+            return vClip(minOverlap);
         }
         else {
-            let vertex = geometry.position.loc(normal, (<Circle>geometry).radius - minOverlap.value / 2);
-            return [ContactConstraint.create(null, vertex, minOverlap.value)];
+            return vClipCircle(polygon, <Circle>geometry, normal, minOverlap.value);
         }
     }
 };
