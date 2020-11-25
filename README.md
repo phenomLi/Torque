@@ -2,6 +2,8 @@
 
  2D 刚体高性能物理引擎，不包含渲染。
 
+<br />
+
 ## Usage
 初始化一个 torque 实例
 ```javascript
@@ -44,6 +46,7 @@ app.stage.add(rectangle);
 ```
 至此，由PIXI创建的矩形`rectangle`与Torque世界的矩形`rect`通过`setRender`函数绑定在了一起。刷新浏览器，可以看见一个黑色边框的，长宽都为100的矩形出现在(100, 100)的位置。
 
+<br />
 
 ## Feature
 - **SATBoost技术**
@@ -61,13 +64,15 @@ app.stage.add(rectangle);
 - 旋转关节，扭转关节，布料等
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 
+<br />
+
 ## Demo
 - 最新的DEMO已将渲染器从zrender替换至PIXI，因PIXI是基于WebGL渲染，具有更好的性能
 - 已增加关节约束功能！
 
-<br />
-
 [戳这里](https://phenomli.github.io/Torque/)
+
+<br />
 
 ## 关于SATBoost
 SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一个优化算法，能大幅提高碰撞检测的效率。在给定7 * 17个正16边形的静止碰撞（rest collision）条件下，与未经过优化的常规SAT对比结果如下（关闭碰撞复用和休眠功能）：
@@ -75,6 +80,8 @@ SATBoost技术是本人研究得到的针对SAT（分离轴测试算法）的一
 ![](https://github.com/phenomLi/Torque/raw/master/images/微信截图_20200913175522.png)
 
 SATBoost主要针对SAT进行改进，但同时，SATBoost也优化了碰撞复用和碰撞点求解的性能。
+
+<br />
 
 ## A.D.
 想了解制作物理引擎相关技术细节，可以关注[我的博客](https://github.com/phenomLi/Blog)（不定时更新）
