@@ -1,15 +1,16 @@
 import { Body } from "../body/body";
 import { Util } from "../common/util";
+import { Joint } from "../joint/joint";
 import { Matrix } from "../math/matrix";
 import { Vector } from "../math/vector";
-import { BodiesFactory } from "./bodiesFactory";
 import { Engine, EngineOpt } from "./engine";
 
 
 
 // Torque主类
 export class TorqueWorld {
-    public static body: BodiesFactory;
+    public static body;
+    public static joint;
     public static vector: (x: number, y: number) => Vector;
     public static matrix: (r1: Vector, r2: Vector) => Matrix;
 
@@ -23,14 +24,22 @@ export class TorqueWorld {
      * 增加刚体
      * @param body 
      */
-    append(body: Body | Body[]) {
-        if(Array.isArray(body)) {
-            body.map(b => this.append(b));
-        }
-        else {
-            body.beforeAppend(this.engine);
-            this.engine.bodies.push(body);
-            body.afterAppend();
+    append(...arg: (Body | Joint)[]) {
+        for(let i = 0; i < arg.length; i++) {
+            if(arg[i] instanceof Body) {
+                let body: Body = arg[i] as Body;
+
+                body.beforeAppend(this.engine);
+                this.engine.bodies.push(body);
+                body.afterAppend();
+            }
+
+            if(arg[i] instanceof Joint) {
+                let joint: Joint = arg[i] as Joint;
+
+                this.engine.joints.push(joint);
+                joint.anchors.map(item => this.append(item.joint, item.anchorBody));
+            }
         }
     }
 
@@ -38,14 +47,24 @@ export class TorqueWorld {
      * 移除刚体
      * @param body 
      */
-    remove(body: Body) {
-        if(body.parent) {
-            body = body.parent;
+    remove(body: Body | Joint) {
+        if(body instanceof Body) {
+            if(body.parent) {
+                body = body.parent;
+            }
+    
+            body.beforeRemove();
+            Util.remove(this.engine.bodies, body);
+            body.afterRemove();
         }
-
-        body.beforeRemove();
-        Util.remove(this.engine.bodies, body);
-        body.afterRemove();
+         
+        if(body instanceof Joint) {
+            Util.remove(this.engine.joints, body);
+            body.anchors.map(item => {
+                this.remove(item.joint);
+                this.remove(item.anchorBody);
+            });
+        }
     }
 
     /**
@@ -53,6 +72,7 @@ export class TorqueWorld {
      */
     destroy() {
         this.engine.bodies.map(body => this.remove(body));
+        this.engine.joints.map(Joint => this.remove(Joint));
         this.engine.manifoldTable.clear();
     }
 
@@ -63,8 +83,6 @@ export class TorqueWorld {
     setEngineOption(opt: EngineOpt) {
         this.engine.setOption(opt);
     }
-
-    addConstraint(type: string, options) { }
 
     /**
      * 绑定沟子事件

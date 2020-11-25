@@ -56,8 +56,6 @@ export interface BodyOpt {
 
     // 方法
     methods?: {
-        // 碰撞过滤器
-        filter: (maskA: number, maskB: number) => boolean;
         // 挂载前
         beforeAppend: (body: Body) => void;
         // 挂载后
@@ -139,6 +137,8 @@ export class Body {
     rotateCenter: Vector;
     // 父图形
     parent: Body;
+    // 是否被加入关节
+    jointed: boolean;
     // 包围盒
     bound: Bound;
     // 子图形
@@ -170,20 +170,20 @@ export class Body {
         this.force = new Vector(0, 0);
         this.torque = 0;
         this.friction = 0.2;
-        this.restitution = 0.8;
+        this.restitution = 0.9;
         this.static = false;
         this.kinetic = false
         this.ignoreGravity = false;
         this.sleeping = false;
         this.sleepCounter = 0;
-        this.mask = 1;
+        this.mask = 0;
         this.bound = null;
+        this.jointed = false;
         this.contactBodies = {};
         this.parent = null;
         this.parts = [this];
 
         this.methods = {
-            filter: (maskA: number, maskB: number) => { return true; },
             beforeAppend: (body: Body) => {},
             afterAppend: (body: Body) => {},
             beforeRemove: (body: Body) => {},
@@ -354,6 +354,14 @@ export class Body {
     setRotation(rotation: number) {
         this.rotation = rotation;
         this.rotate(rotation);
+    }
+
+    /**
+     * 设置碰撞掩码
+     * @param mask 
+     */
+    setMask(mask: number) {
+        this.mask = mask;
     }
 
     /**

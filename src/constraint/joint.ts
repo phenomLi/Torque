@@ -1,47 +1,8 @@
-import { Vector } from "../math/vector";
+import { Vector, _tempVector1, _tempVector2, _tempVector4 } from "../math/vector";
+import { _tempMatrix1, _tempMatrix2, _tempMatrix3 } from "../math/matrix";
+import { Joint } from "../joint/joint";
 import { Body } from "../body/body";
-import { Util } from "../common/util";
 
-
-
-export interface JointOptions {
-    target?: [Vector, Vector];
-    body?: [Body, Body];
-    stiffness?: number;
-    damping?: number;
-}
-
-
-
-export class Joint {
-    id: number;
-    body: [Body, Body];
-    target: [Vector, Vector];
-    stiffness: number;
-    damping: number;
-    length: number;
-
-    constructor(options: JointOptions) {
-        this.body = options.body;
-        this.target = options.target;
-
-        // 若没有设定点却设定了物体，使用物体的质心（局部坐标）
-        if (this.body[0] && !this.target[0])
-            this.target[0] = new Vector(0, 0);
-        if (this.body[1] && !this.target[1])
-            this.target[1] = new Vector(0, 0);
-
-        // 初始化目标点
-        const initialPointA: Vector = this.body[0] ? this.body[0].position.add(this.target[0]) : this.target[0],
-              initialPointB: Vector = this.body[1] ? this.body[1].position.add(this.target[1]) : this.target[1],
-              length = initialPointA.sub(initialPointB).len();
-
-        this.id = Util.id();
-        this.length = length;
-        this.stiffness = options.stiffness || (this.length > 0 ? 1 : 0.7);
-        this.damping = options.damping || 0;
-    }
-}
 
 
 
@@ -49,99 +10,94 @@ export class Joint {
  * 弹簧（距离）约束
  */
 export class JointConstraint {
-    create(opt: JointOptions): Joint {
-        return new Joint(opt);
+    private biasFactor: number;
+
+    constructor() {
+        this.biasFactor = 0.2;
     }
 
-    solveVelocity(spring: Joint) {
-        let bodyA = spring.body[0],
-            bodyB = spring.body[1],
-            targetA = spring.target[0],
-            targetB = spring.target[1];
+    static create(bodyA: Body, bodyB: Body, stiffness: number): Joint {
+        return new Joint(bodyA, bodyB, stiffness);
+    }
 
-        if (!bodyA && !bodyB)
-            return;
-
-        let curPosA = targetA,
-            curPosB = targetB;
-
-        // 求当前目标点的世界坐标位置
-        if(bodyA) curPosA = bodyA.position.add(curPosA);
-        if(bodyB) curPosB = bodyB.position.add(curPosB);
-
-        if (!curPosA || !curPosB)
-            return;
-
-        let delta = curPosA.sub(curPosB),
-            curLength = delta.len();
-
-        // solve distance constraint with Gauss-Siedel method
-        let difference = (curLength - spring.length) / curLength,
-            stiffness = spring.stiffness,
-            force = delta.scl(-difference * stiffness),
-            massTotal = (bodyA? bodyA.invMass: 0) + (bodyB? bodyB.invMass: 0),
-            inertiaTotal = (bodyA? bodyA.invInertia: 0) + (bodyB? bodyB.invInertia: 0),
-            resistanceTotal = massTotal + inertiaTotal,
-            torque,
-            share,
-            normal = delta.scl(1 / curLength),
-            normalVelocity,
-            relativeVelocity;
-
-        if (spring.damping) {
-            let zero = new Vector(),
-                vB = bodyB? bodyB.velocity: zero,
-                vA = bodyA? bodyA.velocity: zero;
-               
-            relativeVelocity = vB.sub(vA);
-            normalVelocity = normal.dot(relativeVelocity);
-        }
-
-        // if (bodyA && !bodyA.fixed) {
-        //     share = bodyA.invMass / massTotal;
-
-        //     // keep track of applied impulses for post solving
-        //     bodyA.constraintImpulse.x -= force.x * share;
-        //     bodyA.constraintImpulse.y -= force.y * share;
-
-        //     // apply forces
-        //     bodyA.position.x -= force.x * share;
-        //     bodyA.position.y -= force.y * share;
-
-        //     // apply damping
-        //     if (spring.damping) {
-        //         bodyA.positionPrev.x -= constraint.damping * normal.x * normalVelocity * share;
-        //         bodyA.positionPrev.y -= constraint.damping * normal.y * normalVelocity * share;
-        //     }
-
-        //     // apply torque
-        //     torque = (Vector.cross(pointA, force) / resistanceTotal) * Constraint._torqueDampen * bodyA.inverseInertia * (1 - constraint.angularStiffness);
-        //     bodyA.constraintImpulse.angle -= torque;
-        //     bodyA.angle -= torque;
-        // }
-
-        // if (bodyB && !bodyB.isStatic) {
-        //     share = bodyB.inverseMass / massTotal;
-
-        //     // keep track of applied impulses for post solving
-        //     bodyB.constraintImpulse.x += force.x * share;
-        //     bodyB.constraintImpulse.y += force.y * share;
+    preSolveVelocity(joints: Joint[], dt: number) {
+        for(let i = 0; i < joints.length; i++) {
+            let joint = joints[i],
+                bodyA = joint.bodyA,
+                bodyB = joint.bodyB,
+                rotationA = bodyA? bodyA.rotation: 0,
+                rotationB = bodyB.rotation,
+                invMassA = bodyA? bodyA.invMass: 0,
+                invMassB = bodyB.invMass,
+                invInertiaA = bodyA? bodyA.invInertia: 0,
+                invInertiaB = bodyB.invInertia,
+                rotA = _tempMatrix1.rotate(rotationA),
+                rotB = _tempMatrix2.rotate(rotationB);
             
-        //     // apply forces
-        //     bodyB.position.x += force.x * share;
-        //     bodyB.position.y += force.y * share;
+            joint.rA = rotA.multiplyVec(joint.offsetA, joint.rA);
+            joint.rB = rotB.multiplyVec(joint.offsetB, joint.rB);
 
-        //     // apply damping
-        //     if (constraint.damping) {
-        //         bodyB.positionPrev.x += constraint.damping * normal.x * normalVelocity * share;
-        //         bodyB.positionPrev.y += constraint.damping * normal.y * normalVelocity * share;
-        //     }
+            let K1 = _tempMatrix1;
+            K1.r1.x = invMassA + invMassB;
+            K1.r1.y = 0;                                    
+            K1.r2.x = 0;                                       
+            K1.r2.y = invMassA + invMassB;
+            
+            let K2 = _tempMatrix2;
+            K2.r1.x =  invInertiaA * joint.rA.y * joint.rA.y;
+            K2.r1.y = -invInertiaA * joint.rA.x * joint.rA.y;
+            K2.r2.x = -invInertiaA * joint.rA.x * joint.rA.y; 
+            K2.r2.y =  invInertiaA * joint.rA.x * joint.rA.x;
+        
+            let K3 = _tempMatrix3;
+            K3.r1.x =  invInertiaB * joint.rB.y * joint.rB.y;
+            K3.r1.y = -invInertiaB * joint.rB.x * joint.rB.y;
+            K3.r2.x = -invInertiaB * joint.rB.x * joint.rB.y; 
+            K3.r2.y =  invInertiaB * joint.rB.x * joint.rB.x;
+            
+            let K = K1.add(K2, _tempMatrix1).add(K3, _tempMatrix1);
+            K.r1.x += (1 - joint.stiffness);
+            K.r2.y += (1 - joint.stiffness);
 
-        //     // apply torque
-        //     torque = (Vector.cross(pointB, force) / resistanceTotal) * Constraint._torqueDampen * bodyB.inverseInertia * (1 - constraint.angularStiffness);
-        //     bodyB.constraintImpulse.angle += torque;
-        //     bodyB.angle += torque;
-        // }
+            joint.jointMatrix = K.invert();
+            
+            let p1 = joint.globalPositionA.add(joint.rA, _tempVector1),
+                p2 = joint.globalPositionB.add(joint.rB, _tempVector2),
+                dp = p2.sub(p1);
 
+            joint.velocityBias.x = dp.x * (1 / dt) * -this.biasFactor;
+            joint.velocityBias.y = dp.y * (1 / dt) * -this.biasFactor;
+
+            bodyA.applyImpulse(joint.jointImpulse.inv(_tempVector4), joint.rA);
+            bodyB.applyImpulse(joint.jointImpulse, joint.rB);
+        }
+    }
+
+    solveVelocity(joints: Joint[]) {
+        for(let i = 0; i < joints.length; i++) {
+            let joint = joints[i],
+                bodyA = joint.bodyA,
+                bodyB = joint.bodyB,
+                velocityA = bodyA? bodyA.velocity: new Vector(),
+                velocityB = bodyB.velocity,
+                angularVelocityA = bodyA? bodyA.angularVelocity: 0,
+                angularVelocityB = bodyB.angularVelocity;
+
+            joint.rA.croNum(angularVelocityA, _tempVector1);
+            joint.rB.croNum(angularVelocityB, _tempVector2);
+
+            let velocityPointA = velocityA.add(_tempVector1, _tempVector1),
+                velocityPointB = velocityB.add(_tempVector2, _tempVector2),
+                relativeVelocity = velocityPointB.sub(velocityPointA, _tempVector1),
+                velocityBias = joint.velocityBias.sub(relativeVelocity),
+                stiffnessImpulse = joint.jointImpulse.scl(1 - joint.stiffness),
+                impulse = joint.jointMatrix.multiplyVec(velocityBias.sub(stiffnessImpulse));
+            
+            joint.jointImpulse.x += impulse.x;
+            joint.jointImpulse.y += impulse.y;
+
+            bodyA.applyImpulse(impulse.inv(_tempVector4), joint.rA);
+            bodyB.applyImpulse(impulse, joint.rB);
+        }
     }
 };

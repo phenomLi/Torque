@@ -96,11 +96,10 @@ export class Matrix {
 
     /**
      * 矩阵与 2 维向量相乘
-     * @param m 
      * @param v 
      * @param vOut 
      */
-    multiplyVec(m: Matrix, v: Vector, vOut?: Vector): Vector {
+    multiplyVec(v: Vector, vOut?: Vector): Vector {
         let dest: Vector;
 
         if(vOut !== undefined) {
@@ -110,8 +109,8 @@ export class Matrix {
             dest = new Vector();
         }
 
-        dest.x = m.r1.x * v.x + m.r1.y * v.y;
-        dest.y = m.r2.x * v.x + m.r2.y * v.y;
+        dest.x = this.r1.x * v.x + this.r1.y * v.y;
+        dest.y = this.r2.x * v.x + this.r2.y * v.y;
 
         return dest;
     }
@@ -132,7 +131,7 @@ export class Matrix {
         }
 
         dest.r1 = this.r1.scl(n, dest.r1);
-        dest.r2 = this.r1.scl(n, dest.r2);
+        dest.r2 = this.r2.scl(n, dest.r2);
 
         return dest;
     }
@@ -181,18 +180,35 @@ export class Matrix {
             dest = new Matrix();
         }   
 
-        const det = this.determinant();
+        let det = this.determinant();
 
         if(det === 0) return null;
 
-        dest.r1.x = this.r2.y;
-        dest.r1.y = -this.r1.y;
-        dest.r2.x = -this.r1.x;
-        dest.r2.y = this.r1.x;
+        let r1x = this.r1.x,
+            r1y = this.r1.y,
+            r2x = this.r2.x,
+            r2y = this.r2.y;
 
-        dest = dest.multiplyNum((1 / det));
+        dest.r1.x = r2y;
+        dest.r1.y = -r1y;
+        dest.r2.x = -r2x;
+        dest.r2.y = r1x;
+
+        dest = dest.multiplyNum(1 / det);
 
         return dest;
+    }
+
+    /**
+     * 拷贝矩阵
+     */
+    clone(): Matrix {
+        let m = new Matrix();
+
+        m.r1 = this.r1.col();
+        m.r2 = this.r2.col();
+
+        return m;
     }
 
     /**
@@ -207,7 +223,7 @@ export class Matrix {
         this.r1.y = -sin;
 
         this.r2.x = sin;
-        this.r1.y = cos;
+        this.r2.y = cos;
 
         return this;
     }

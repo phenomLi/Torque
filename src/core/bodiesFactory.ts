@@ -9,7 +9,7 @@ import { Vertices } from "../common/vertices";
 
 
 
-export class BodiesFactory {
+export const BodiesFactory = {
 
     /**
      * 创造圆形
@@ -18,7 +18,7 @@ export class BodiesFactory {
      * @param radius 半径 
      * @param opt 配置项
      */
-    Circle(x: number, y: number, radius: number, opt?: CircleOpt): Circle {
+    Circle(x: number, y: number, radius: number, opt?): Circle {
         opt = opt || <CircleOpt>{};
 
         Util.extend(opt, {
@@ -27,7 +27,7 @@ export class BodiesFactory {
         });
 
         return new Circle(opt);;
-    }   
+    },   
 
     /**
      * 创造多边形
@@ -36,7 +36,7 @@ export class BodiesFactory {
      * @param v 顶点集 
      * @param opt 配置项
      */
-    Polygon(x: number, y: number, v: Array<number[]>, opt?: PolygonOpt & CompositeOpt): Polygon | Composite {
+    Polygon(x: number, y: number, v: Array<number[]>, opt): Polygon | Composite {
         let vertices = v.map(vertex => new Vector(vertex[0], vertex[1])),
             options = opt || <PolygonOpt & CompositeOpt>{ origin: new Vector(x, y) };
 
@@ -71,7 +71,7 @@ export class BodiesFactory {
     
             return new Polygon(options);
         }
-    }
+    },
 
     /**
      * 创造矩形
@@ -81,7 +81,7 @@ export class BodiesFactory {
      * @param height 高
      * @param opt 配置项
      */
-    Rect(x: number, y: number, width: number, height: number, opt?: RectOpt): Rect {
+    Rect(x: number, y: number, width: number, height: number, opt): Rect {
         opt = opt || <RectOpt>{};
 
         Util.extend(opt, {
@@ -91,13 +91,13 @@ export class BodiesFactory {
         });
 
         return new Rect(opt);
-    }
+    },
 
     /**
      * 创造复合图形
      * @param bodies 
      */
-    Composite(bodies: Body[], opt?: CompositeOpt): Composite {
+    Composite(bodies: Body[], opt): Composite {
         opt = opt || <CompositeOpt>{};
         opt.bodies = bodies;
         return new Composite(opt);

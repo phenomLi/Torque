@@ -32,7 +32,7 @@ export class Sleeping {
      * @param body 
      */
     sleep(body: Body) {
-        if(body.kinetic) return;
+        if(body.kinetic || body.jointed) return;
 
         body.sleeping = true;
         body.sleepCounter = this.sleepDelayThreshold;

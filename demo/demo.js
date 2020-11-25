@@ -5,7 +5,10 @@ const examples = [
     ['复合刚体', compositeWorld],
     ['压力测试', stressWorld],
     ['失重', weightlessWorld],
-    ['凹多边形', concaveWorld]
+    ['凹多边形', concaveWorld],
+    ['关节约束', jointWorld],
+    ['绳索', ropeWorld],
+    ['布料', clothWorld]
 ];
 
 let renderer = null,
@@ -32,7 +35,7 @@ const vm = new Vue({
         bodyNumber: 0,
         showBodyInfo: false,
         examples: examples,
-        curWorldIndex: 0
+        curWorldIndex: 9
     },
     mounted() {
         this.createWorld(this.curWorldIndex);

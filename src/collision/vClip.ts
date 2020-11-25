@@ -1,7 +1,7 @@
 import { Edge, VertexList } from "../common/vertices";
 import { Vector, _tempVector1, _tempVector2 } from "../math/vector";
 import { Contact, ContactConstraint } from "../constraint/contact";
-import { MinOverlap } from "./sat";
+import { MinOverlap } from "./nfsp-sat";
 import { Circle } from "../body/circle";
 import { Polygon } from "../body/polygon";
 import { Arcs } from "../common/arcs";
@@ -161,18 +161,18 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
  */
 export function vClipCircle(polygon: Polygon, circle: Circle, normal: Vector, depth: number) {
     let incEdge: Edge = findIncidentEdge(polygon.vertexList, normal, null),
-        vertex: Vector;
+        vertex: Vector = circle.position.loc(normal, circle.radius - depth / 2),
+        contacts: Contact[] = [ContactConstraint.create(null, vertex, depth)];
 
     if(Arcs.isContains(circle, incEdge.start)) {
-        return [ContactConstraint.create(null, incEdge.start, depth)];
+        contacts.push(ContactConstraint.create(null, incEdge.start, depth));
     }
 
     if(Arcs.isContains(circle, incEdge.end)) {
-        return [ContactConstraint.create(null, incEdge.end, depth)];
+        contacts.push(ContactConstraint.create(null, incEdge.end, depth));
     }
 
-    vertex = circle.position.loc(normal, circle.radius - depth / 2);
-    return [ContactConstraint.create(null, vertex, depth)];
+    return contacts;
 }
 
 

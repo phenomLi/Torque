@@ -25,10 +25,10 @@ export type MinOverlap = {
  * 参考：https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
  */
 
-export class SAT {
+export class NFSP_SAT {
     // 是否开启SAT加速
     private enableSATBoost: boolean = true;
-    private reuseCollisionThreshold: number = 0.7;
+    private reuseCollisionThreshold: number = 0.4;
 
     constructor(opt: EngineOpt) {
         Util.merge(this, opt);
@@ -399,7 +399,7 @@ export class SAT {
      */
     private canReuseCollision(bodyA: Body, bodyB: Body, prevCollision: Collision): boolean {
         // 若上次碰撞的缓存存在
-        if(prevCollision) {
+        if(prevCollision && bodyB.type !== bodyType.circle) {
             let parentA = bodyA.parent || bodyA,
                 parentB = bodyB.parent || bodyB,
                 motion = Math.sqrt(parentA.motion + parentB.motion);

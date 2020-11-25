@@ -7,6 +7,8 @@ import { Sleeping } from "./sleeping";
 import { ManifoldTable } from "../collision/manifoldTable";
 import { Collision, Manifold } from "../collision/manifold";
 import { ContactConstraint } from "../constraint/contact";
+import { JointConstraint } from "../constraint/joint";
+import { Joint } from "../joint/joint";
 
 
 
@@ -25,8 +27,8 @@ export interface EngineOpt {
 
     // 是否开启碰撞检测
     enableCollisionDetection: boolean;
-    // 是否开启碰撞求解
-    enableCollisionResolve: boolean;
+    // 约束求解迭代次数
+    iteration: number;
     // 是否开启休眠
     enableSleeping: boolean;
     // 是否开启缓存
@@ -66,8 +68,8 @@ export class Engine {
     enableSleeping: boolean;
     // 是否开启碰撞检测
     enableCollisionDetection: boolean;
-    // 是否开启碰撞求解
-    enableCollisionResolve: boolean;
+    // 约束求解迭代次数
+    iteration: number;
 
     // 重力
     gravity: Vector;
@@ -76,6 +78,8 @@ export class Engine {
 
     // 刚体列表
     bodies: Body[];
+    // 关节列表
+    joints: Joint[];
     // 时间步迭代器
     timeStepper: TimeStepper;
     // 碰撞检测器
@@ -84,6 +88,8 @@ export class Engine {
     manifoldTable: ManifoldTable;
     // 接触约束求解器
     contactConstraint: ContactConstraint;
+    // 关节约束求解器
+    jointConstraint: JointConstraint;
     // 休眠管理器
     sleeping: Sleeping;
     // 引力缩放因子
@@ -100,7 +106,7 @@ export class Engine {
 
         this.enableSleeping = true;
         this.enableCollisionDetection = true;
-        this.enableCollisionResolve = true;
+        this.iteration = 20;
 
         this.methods = {
             tickStart: () => {},
@@ -119,10 +125,12 @@ export class Engine {
         Util.merge(this, opt);
 
         this.bodies = [];
+        this.joints = [];
         this.timeStepper = new TimeStepper(this, opt);
         this.detector = new Detector(this, opt);
         this.manifoldTable = new ManifoldTable(opt);
         this.contactConstraint = new ContactConstraint();
+        this.jointConstraint = new JointConstraint();
         this.sleeping = new Sleeping(opt);
     }
 
@@ -146,8 +154,8 @@ export class Engine {
                 continue;
             }
 
-            gravityForce.x = this.gravity.x * body.mass * (1 / dt / 2);
-            gravityForce.y = this.gravity.y * body.mass * (1 / dt / 2);
+            gravityForce.x = this.gravity.x * body.mass * this.gravityScaler;
+            gravityForce.y = this.gravity.y * body.mass * this.gravityScaler;
 
             // 应用受力
             body.applyForce(gravityForce);
@@ -155,25 +163,28 @@ export class Engine {
             body.integrateForces(dt);
         }
 
-        // 是否开启碰撞检测
+        // 进行碰撞检测
+        let collisions: Collision[] = [];
+
         if(this.enableCollisionDetection) {
-            // 进行碰撞检测
-            let collisions: Collision[] = this.detector.detect(this.bodies);
+            collisions = this.detector.detect(this.bodies);
+        }
 
-            //根据得到的碰撞对更新碰撞流形
-            this.manifoldTable.update(collisions, timeStamp);
-            // 移除缓存表超时的碰撞对
-            this.manifoldTable.filter(timeStamp);
+        //根据得到的碰撞对更新碰撞流形
+        this.manifoldTable.update(collisions, timeStamp);
+        // 移除缓存表超时的碰撞对
+        this.manifoldTable.filter(timeStamp);
 
-            // 是否开启了碰撞求解
-            if(this.enableCollisionResolve) {
-                // 若发现有休眠的刚体发生碰撞，则唤醒
-                if (this.enableSleeping)
-                   this.sleeping.afterCollision(this.manifoldTable.list);
+        // 若发现有休眠的刚体发生碰撞，则唤醒
+        if (this.enableSleeping)
+            this.sleeping.afterCollision(this.manifoldTable.list);
 
-                // 求解碰撞约束
-                this.contactConstraint.solve(this.manifoldTable.list, dt);
-            }
+        this.contactConstraint.preSolveVelocity(this.manifoldTable.list, dt);
+        this.jointConstraint.preSolveVelocity(this.joints, dt);
+        
+        for(let i = 0; i < 20; i++) {
+            this.contactConstraint.solveVelocity(this.manifoldTable.list);
+            this.jointConstraint.solveVelocity(this.joints);
         }
 
         for(let i = 0; i < this.bodies.length; i++) {
@@ -192,7 +203,9 @@ export class Engine {
      * @param dt 
      */
     render(dt: number) {
-        let body: Body, i, j;
+        let body: Body, 
+            joint: Joint,
+            i, j;
             
         for(i = 0; i < this.bodies.length; i++) {
             body = this.bodies[i];
@@ -209,6 +222,11 @@ export class Engine {
                     body.parts[j].render(body.parts[j], dt);
                 }
             }
+        }
+
+        for(i = 0; i < this.joints.length; i++) {
+            joint = this.joints[i];
+            joint.needRender && joint.render(joint, dt);
         }
     }
 

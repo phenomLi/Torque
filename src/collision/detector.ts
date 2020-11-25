@@ -2,23 +2,11 @@ import { Engine, EngineOpt } from "../core/engine";
 import { Bound } from "../common/bound";
 import { Util } from "../common/util";
 import { Body, bodyType } from "../body/body";
-import { Collision, Manifold } from "./manifold";
+import { Collision } from "./manifold";
 import { ManifoldTable } from "./manifoldTable";
 import { Circle } from "../body/circle";
 import { Polygon } from "../body/polygon";
-import { SAT } from "./sat";
-
-
-let TimeList = [],
-    TestFlag = false;
-
-let test = document.getElementById('test');
-
-if(test) {
-    test.addEventListener('click', () => {
-        TestFlag = true;
-    });
-}
+import { NFSP_SAT } from "./nfsp-sat";
 
 
 /**
@@ -35,11 +23,11 @@ export type broadPhasePair = {
 export class Detector {
     private engine: Engine;
     // 分离轴测试
-    private SAT: SAT;
+    private NFSP_SAT: NFSP_SAT;
 
     constructor(engine: Engine, opt: EngineOpt) {
         this.engine = engine;
-        this.SAT = new SAT(opt);
+        this.NFSP_SAT = new NFSP_SAT(opt);
     }
 
     /**
@@ -55,29 +43,8 @@ export class Detector {
 
         // console.log(broadPhasePairs);
 
-        let start = performance.now();
-
         // 细阶段检测
         collisions = this.narrowPhase(broadPhasePairs);
-
-        let end = performance.now(),
-            range = 60;
-
-        if(TestFlag) {
-            if(TimeList.length < range) {
-                TimeList.push(end - start);
-            }
-            else {
-                let total = TimeList.reduce((t, cur) => {
-                    return t + cur;
-                });
-
-                console.log(total / range);
-
-                TestFlag = false;
-                TimeList.length = 0;
-            }
-        }
 
         // console.log(collisions);
 
@@ -109,7 +76,7 @@ export class Detector {
      */
     private canCollide(bodyA: Body, bodyB: Body): boolean {
         // 若bodies[i]的碰撞过滤器过滤了bodies[i]，不进行检测
-        if(!bodyA.methods.filter(bodyA.mask, bodyB.mask) || !bodyB.methods.filter(bodyB.mask, bodyA.mask)) return false;
+        if(bodyA.mask !== 0 && bodyB.mask !== 0 && bodyA.mask === bodyB.mask) return false;
         
         // 若刚体已经移出可视区了，跳过
         if(this.isBodyOutWindow(bodyA.bound) || this.isBodyOutWindow(bodyB.bound)) return false;
@@ -194,19 +161,19 @@ export class Detector {
 
                     // A,B皆为圆形
                     if(partA.type === bodyType.circle && partB.type === bodyType.circle) {
-                        collisions.push(this.SAT.circleCollideCircle(<Circle>partA, <Circle>partB, prevCollision));
+                        collisions.push(this.NFSP_SAT.circleCollideCircle(<Circle>partA, <Circle>partB, prevCollision));
                     }
                     // A为多边形，B为圆形
                     else if(partA.type === bodyType.polygon && partB.type === bodyType.circle) {
-                        collisions.push(this.SAT.polygonCollideBody(<Polygon>partA, partB, prevCollision));
+                        collisions.push(this.NFSP_SAT.polygonCollideBody(<Polygon>partA, partB, prevCollision));
                     }
                     // A为圆形，B为多边形
                     else if(partA.type === bodyType.circle && partB.type === bodyType.polygon) {
-                        collisions.push(this.SAT.polygonCollideBody(<Polygon>partB, partA, prevCollision));
+                        collisions.push(this.NFSP_SAT.polygonCollideBody(<Polygon>partB, partA, prevCollision));
                     }
                     // A,B皆为多边形
                     else {
-                        collisions.push(this.SAT.polygonCollideBody(<Polygon>partA, <Polygon>partB, prevCollision));
+                        collisions.push(this.NFSP_SAT.polygonCollideBody(<Polygon>partA, <Polygon>partB, prevCollision));
                     }
                 }
             }

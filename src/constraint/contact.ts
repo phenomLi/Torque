@@ -1,7 +1,6 @@
 import { Body } from "../body/body";
 import { Vector, _tempVector2, _tempVector1, _tempVector3, _tempVector4 } from "../math/vector";
 import { Manifold, Collision } from "../collision/manifold";
-import { Constraint } from "./constraint";
 import { Util } from "../common/util";
 
 
@@ -60,7 +59,7 @@ export class Contact {
  * 碰撞求解器
  */
 
-export class ContactConstraint extends Constraint {
+export class ContactConstraint {
     // 穿透修正误差
     private slop: number;
     // 偏移因子
@@ -69,10 +68,6 @@ export class ContactConstraint extends Constraint {
     private restFactor: number;
 
     constructor() {
-        super();
-
-        this.velocitySolverIterations = 20;
-        this.positionSolverIterations = 1;
         this.slop = 0.01;
         this.biasFactor = 0.2;
         this.restFactor = 24;
@@ -82,20 +77,12 @@ export class ContactConstraint extends Constraint {
         return new Contact(id, vertex, depth);
     }
 
-    solve(manifolds: Manifold[], dt: number) {
-        this.initSolver(manifolds, dt);
-
-        for(let i = 0; i < this.positionSolverIterations; i++) {
-            this.solvePosition(manifolds);
-        }
-
-        this.preSolveVelocity(manifolds);
-        for(let i = 0; i < this.velocitySolverIterations; i++) {
-            this.solveVelocity(manifolds);
-        }
-    }
-
-    initSolver(manifolds: Manifold[], dt: number) {
+    /**
+     * 求解速度约束预处理
+     * @param manifolds 碰撞流形
+     * @param dt 步长
+     */
+    preSolveVelocity(manifolds: Manifold[], dt: number) {
         let manifold: Manifold,
             collision: Collision,
             contact: Contact,
@@ -139,79 +126,12 @@ export class ContactConstraint extends Constraint {
                 invMassTangent += bodyA.invInertia * (r1.dot(r1) - rt1 * rt1);
                 invMassTangent += bodyB.invInertia * (r2.dot(r2) - rt2 * rt2);
 
-                let bias = (1 / dt) * Math.max(0, contact.depth - this.slop);
-
+                let bias = 60 * Math.max(0, contact.depth - this.slop) * this.biasFactor;
+            
                 // 保存 J(M^-1)(J^T)的倒数
                 contact.shareNormal = 1 / invMassNormal;
                 contact.shareTangent = 1 / invMassTangent;
-                contact.velocityBias = this.biasFactor * bias;
-                contact.positionCorrectiveImpulse = contact.velocityBias * manifold.restitution / invMassNormal;
-            }
-        }
-    }
-
-    /**
-     * 修正位置约束
-     * @param manifolds 
-     */
-    solvePosition(manifolds: Manifold[]) {
-        let manifold: Manifold,
-            collision: Collision,
-            contact: Contact,
-            bodyA: Body,
-            bodyB: Body,
-            normal: Vector,
-            i, j;
-
-        for (i = 0; i < manifolds.length; ++i) {
-            manifold = manifolds[i];
-
-            if(!manifold.isActive) continue;
-
-            collision = manifold.collision;
-            normal = collision.normal;
-            bodyA = collision.bodyA;
-            bodyB = collision.bodyB;
-
-            for(j = 0; j < collision.contacts.length; j++) {
-                contact = collision.contacts[j];
-
-                let positionCorrectiveImpulse = normal.scl(contact.positionCorrectiveImpulse, _tempVector4);
-
-                bodyA.applyImpulse(positionCorrectiveImpulse, contact.offsetA);
-                bodyB.applyImpulse(positionCorrectiveImpulse.inv(positionCorrectiveImpulse), contact.offsetB);
-            }
-        }
-    }
-
-    /**
-     * 求解速度约束预处理
-     * @param manifolds 碰撞流形
-     * @param dt 步长
-     */
-    preSolveVelocity(manifolds: Manifold[]) {
-        let manifold: Manifold,
-            collision: Collision,
-            contact: Contact,
-            bodyA: Body,
-            bodyB: Body,
-            normal: Vector,
-            tangent: Vector,
-            i, j;
-
-        for (i = 0; i < manifolds.length; ++i) {
-            manifold = manifolds[i];
-
-            if(!manifold.isActive) continue;
-
-            collision = manifold.collision;
-            normal = collision.normal;
-            tangent = collision.tangent;
-            bodyA = collision.bodyA;
-            bodyB = collision.bodyB;
-
-            for(j = 0; j < collision.contacts.length; j++) {
-                contact = collision.contacts[j];
+                contact.velocityBias = bias;
 
                 // warm start
                 if(contact.normalImpulse !== 0 || contact.tangentImpulse !== 0) {
