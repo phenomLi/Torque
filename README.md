@@ -2,7 +2,9 @@
 
  2D 刚体高性能物理引擎，不包含渲染。
 
-## usage
+ 最新：已增加关节约束功能！详看demo
+
+## Usage
 初始化一个 torque 实例
 ```javascript
 const torque = new Torque(width, height);
@@ -45,7 +47,7 @@ app.stage.add(rectangle);
 至此，由PIXI创建的矩形`rectangle`与Torque世界的矩形`rect`通过`setRender`函数绑定在了一起。刷新浏览器，可以看见一个黑色边框的，长宽都为100的矩形出现在(100, 100)的位置。
 
 
-## feature
+## Feature
 - **SATBoost技术**
 - 休眠 / 唤醒技术
 - Warm Start
@@ -58,6 +60,7 @@ app.stage.add(rectangle);
 - 复合刚体
 - 静态 / 运动 / 动态的刚体
 - 摩擦力，静摩擦力，空气摩擦，恢复系数
+- 旋转关节，扭转关节，布料等
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 
 ## Demo
