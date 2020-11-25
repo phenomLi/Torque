@@ -35,7 +35,7 @@ const vm = new Vue({
         bodyNumber: 0,
         showBodyInfo: false,
         examples: examples,
-        curWorldIndex: 9
+        curWorldIndex: 0
     },
     mounted() {
         this.createWorld(this.curWorldIndex);
