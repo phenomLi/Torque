@@ -2,8 +2,6 @@
 
  2D 刚体高性能物理引擎，不包含渲染。
 
- 最新：已增加关节约束功能！详看demo
-
 ## Usage
 初始化一个 torque 实例
 ```javascript
@@ -64,7 +62,11 @@ app.stage.add(rectangle);
 - 事件（collisionStart/collisionEnd/sleepStart/sleepEnd...）
 
 ## Demo
-（最新的DEMO已将渲染器从zrender替换至PIXI，因PIXI是基于WebGL渲染，具有更好的性能）
+- 最新的DEMO已将渲染器从zrender替换至PIXI，因PIXI是基于WebGL渲染，具有更好的性能
+- 已增加关节约束功能！
+
+<br />
+
 [戳这里](https://phenomli.github.io/Torque/)
 
 ## 关于SATBoost
