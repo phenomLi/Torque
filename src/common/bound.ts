@@ -49,15 +49,36 @@ export class Bound {
 
     /**
      * 更新包围盒（通常发生在刚体发生旋转，min和max都要重新计算）
-     * @param vertexList 
+     * @param vertices
      */
-    update(vertexList: VertexList) {
-        let range = Vertices.getRange(vertexList);
+    update(vertices: VertexList) {
+        let maxX = -Infinity, maxY = -Infinity,
+            minX = Infinity, minY = Infinity;
 
-        this.min.x = range.min.x;
-        this.min.y = range.min.y;
-        this.max.x = range.max.x;
-        this.max.y = range.max.y;
+        for(let i = 0; i < vertices.length; i++) {
+            let v = vertices[i];
+
+            if(v.x < minX) {
+                minX = v.x;
+            }
+
+            if(v.x > maxX) {
+                maxX = v.x;
+            }
+
+            if(v.y < minY) {
+                minY = v.y;
+            }
+
+            if(v.y > maxY) {
+                maxY = v.y;
+            }
+        }
+
+        this.min.x = minX;
+        this.min.y = minY;
+        this.max.x = maxX;
+        this.max.y = maxY;
     }
 
     /**
