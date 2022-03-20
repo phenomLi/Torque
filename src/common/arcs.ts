@@ -6,6 +6,7 @@ import { Polygon } from "../body/polygon";
 
 
 const _tempDynamicAxis: Axis = {
+    index: 0,
     value: null,
     opposite: null,
     origin: null,

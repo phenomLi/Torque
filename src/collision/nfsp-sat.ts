@@ -84,6 +84,7 @@ export class NFSP_SAT {
                 normal = this.reviseNormal(minOverlap.axis.value, poly, geometry);
 
             // 此处collision.axis与minOverlap.axis不能共享一个对象，因为collision.axis是根据不同碰撞而变化的，而minOverlap.axis不能变
+            collision.axis.index = axis.index;
             collision.axis.value = axis.value;
             collision.axis.supportVertexIndex = axis.supportVertexIndex;
             collision.axis.oppositeVertexIndex = axis.oppositeVertexIndex;
@@ -115,6 +116,7 @@ export class NFSP_SAT {
             minOverlap: MinOverlap = {
                 value: overlaps,
                 axis: {
+                    index: 0,
                     value: axis,
                     origin: null,
                     opposite: null,

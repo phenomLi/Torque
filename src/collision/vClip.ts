@@ -136,7 +136,6 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
     }
 
 
-
     if(incVertex[0]) {
         contacts.push(ContactConstraint.create(ids[0], incVertex[0], Math.abs(d1)));
     }
@@ -145,7 +144,6 @@ export function vClip(minOverlap: MinOverlap): Contact[] {
         contacts.push(ContactConstraint.create(ids[1], incVertex[1], Math.abs(d2)));
     }
         
-
     return contacts;
 }
 

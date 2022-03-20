@@ -21,6 +21,7 @@ export class Collision {
     partB: Body;
     // 分离轴
     axis: Axis = {
+        index: 0,
         value: null,
         oppositeVertexIndex: null,
         supportVertexIndex: null,

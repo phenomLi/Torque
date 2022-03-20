@@ -85,8 +85,8 @@ export class ManifoldTable {
                     this.collisionStart.push(manifold);
                 }
 
-                collision.bodyA.onCollide(collision.bodyB);
-                collision.bodyB.onCollide(collision.bodyA);
+                collision.bodyA.onCollide(collision.bodyB, collision);
+                collision.bodyB.onCollide(collision.bodyA, collision);
             }
         }
 

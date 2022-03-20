@@ -7,6 +7,7 @@ import { Bound } from "../common/bound";
 import { Util } from "../common/util";
 import { Engine } from "../core/engine";
 import { Axis } from "../common/vertices";
+import { Collision } from "../collision/manifold";
 
 
 
@@ -69,7 +70,7 @@ export interface BodyOpt {
         // 结束休眠
         sleepEnd: (body: Body) => void;
         // 发生了碰撞
-        onCollide: (body: Body) => void;
+        onCollide: (body: Body, collision: Collision) => void;
     }
 }
 
@@ -563,9 +564,9 @@ export class Body {
 
     sleepEnd() { this.methods.sleepEnd(this); }
 
-    onCollide(target: Body) {
+    onCollide(target: Body, collision: Collision) {
         this.contactBodies[target.stringId] = target;
         // 触发碰撞钩子
-        this.methods.onCollide(this);
+        this.methods.onCollide(this, collision);
     }
 } 

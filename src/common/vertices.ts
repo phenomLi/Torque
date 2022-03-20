@@ -13,6 +13,7 @@ export type Edge = {
 };
 // 边法向量（轴）类型
 export type Axis = {
+    index: number;
     value: Vector;
     supportVertexIndex: number;
     oppositeVertexIndex: number;
@@ -129,6 +130,7 @@ export const Vertices = {
 
                 axis = v[j].sub(v[i]).nor().nol();
                 axes.push({
+                    index: i,
                     value: axis,
                     opposite: null,
                     origin: vertexList,
